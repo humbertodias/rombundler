@@ -279,13 +279,10 @@ void create_window(int width, int height)
 
 	if (!gladLoadGLLoader((GLADloadproc)platform_get_proc_address))
 		die("Failed to initialize OpenGL functions");
-	if (platform_gl_check_proc_pointers() && !glTexImage2D)
+	if (!platform_gl_entry_points_ok())
 		die("Failed to initialize OpenGL functions");
-	if (platform_use_glsl_shaders()) {
-		if (platform_gl_check_proc_pointers() && (!glCreateShader || !glGenVertexArrays))
-			die("Failed to initialize OpenGL functions");
+	if (platform_use_glsl_shaders())
 		init_shaders();
-	}
 
 	platform_set_swap_interval(1);
 
@@ -302,8 +299,15 @@ void video_should_close(int v)
 
 static GLenum tex_internal_format(void)
 {
-	if (platform_gles())
+	if (platform_gles()) {
+		/* WebGL2 prefers sized formats; RGB+UNSIGNED_SHORT_5_6_5 with unsized
+		 * RGB can fail and leave a black framebuffer after Genesis sets RGB565. */
+		if (video.pixfmt == GL_UNSIGNED_SHORT_5_6_5)
+			return GL_RGB565;
+		if (video.pixfmt == GL_UNSIGNED_SHORT_5_5_5_1)
+			return GL_RGB5_A1;
 		return video.pixtype == GL_RGB ? GL_RGB : GL_RGBA;
+	}
 	return GL_RGBA8;
 }
 

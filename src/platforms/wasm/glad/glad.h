@@ -11,6 +11,12 @@
 #ifndef GL_UNSIGNED_INT_8_8_8_8_REV
 #define GL_UNSIGNED_INT_8_8_8_8_REV 0x8367
 #endif
+#ifndef GL_RGB565
+#define GL_RGB565 0x8D62
+#endif
+#ifndef GL_RGB5_A1
+#define GL_RGB5_A1 0x8057
+#endif
 
 typedef void *(*GLADloadproc)(const char *name);
 

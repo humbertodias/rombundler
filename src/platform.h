@@ -17,7 +17,10 @@ void platform_prepare_core(const char *path);
 int platform_gl_enable_texture_2d(void);
 int platform_use_glsl_shaders(void);
 int platform_has_audio(void);
-int platform_gl_check_proc_pointers(void);
+/* Non-zero if required GL entry points are usable after gladLoadGLLoader.
+ * Desktop verifies glad function pointers; other ports link GL symbols. */
+int platform_gl_entry_points_ok(void);
+
 int platform_gles(void);
 int platform_use_fbo(void);
 int platform_unpack_row_length(void);

@@ -11,6 +11,7 @@
 #   bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 #   bash build.sh vita /path/to/core_libretro.a
 #   bash build.sh wasm /path/to/core_libretro.a
+#   bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
 #   bash build.sh switch --core /path/to/core_libretro.a
 #   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
 #   bash build.sh linux shell
@@ -22,10 +23,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
-USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--fetch-core url|alias]
+USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--fetch-core url|alias] [--rom file]
        $0 macos [x86_64|arm64] [shell|sdk]
        $0 switch|vita|wasm /path/to/core_libretro.a
-       $0 switch|vita|wasm --fetch-core genesis"
+       $0 switch|vita|wasm --fetch-core genesis
+       $0 wasm --fetch-core genesis --rom game.md"
 
 set -a
 # shellcheck disable=SC1091
@@ -52,6 +54,7 @@ MAC_ARCH=""
 CORE_LIBRARY="${ROMBUNDLER_CORE_LIBRARY:-}"
 FETCH_CORE=""
 CORE_NAME="${ROMBUNDLER_CORE_NAME:-dummy}"
+WASM_ROM="${ROMBUNDLER_WASM_ROM:-}"
 
 # Label used in dist/ROMBundler-<port>-<core>-<ver>-<arch>.zip
 core_label_from() {
@@ -100,6 +103,18 @@ while [[ $# -gt 0 ]]; do
       FETCH_CORE="${1#--fetch-core=}"
       shift
       ;;
+    --rom)
+      WASM_ROM="${2:-}"
+      if [[ -z "${WASM_ROM}" ]]; then
+        echo "${USAGE}" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    --rom=*)
+      WASM_ROM="${1#--rom=}"
+      shift
+      ;;
     x86_64|amd64|arm64|aarch64|static)
       MAC_ARCH="$1"
       shift
@@ -132,6 +147,18 @@ if [[ -n "${FETCH_CORE}" ]]; then
     echo "use either --fetch-core or --core / path.a, not both" >&2
     exit 1
   fi
+fi
+
+if [[ -n "${WASM_ROM}" ]]; then
+  if [[ "${PLATFORM}" != "wasm" ]]; then
+    echo "--rom is only supported for the wasm port" >&2
+    exit 1
+  fi
+  if [[ ! -f "${WASM_ROM}" ]]; then
+    echo "ROM not found: ${WASM_ROM}" >&2
+    exit 1
+  fi
+  WASM_ROM="$(cd "$(dirname "${WASM_ROM}")" && pwd)/$(basename "${WASM_ROM}")"
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -196,6 +223,7 @@ fi
 
 DOCKER_MOUNTS=(-v "${ROOT}:/src")
 CORE_CMAKE_PATH=""
+ROM_CMAKE_PATH=""
 
 if [[ -n "${CORE_LIBRARY}" ]]; then
   if [[ ! -f "${CORE_LIBRARY}" ]]; then
@@ -218,6 +246,15 @@ if [[ -n "${CORE_LIBRARY}" ]]; then
   else
     CORE_CMAKE_PATH="/core/$(basename "${CORE_ABS}")"
     DOCKER_MOUNTS+=(-v "${CORE_ABS}:${CORE_CMAKE_PATH}:ro")
+  fi
+fi
+
+if [[ -n "${WASM_ROM}" ]]; then
+  if [[ "${WASM_ROM}" == "${ROOT}/"* ]]; then
+    ROM_CMAKE_PATH="/src/${WASM_ROM#"${ROOT}"/}"
+  else
+    ROM_CMAKE_PATH="/rom/$(basename "${WASM_ROM}")"
+    DOCKER_MOUNTS+=(-v "${WASM_ROM}:${ROM_CMAKE_PATH}:ro")
   fi
 fi
 
@@ -263,6 +300,9 @@ echo "core-name: ${CORE_NAME}"
 if [[ -n "${CORE_CMAKE_PATH}" ]]; then
   echo "core: ${CORE_CMAKE_PATH}"
 fi
+if [[ -n "${ROM_CMAKE_PATH}" ]]; then
+  echo "rom: ${ROM_CMAKE_PATH}"
+fi
 
 CMAKE_CORE_ARGS=()
 if [[ -n "${CORE_CMAKE_PATH}" ]]; then
@@ -270,6 +310,15 @@ if [[ -n "${CORE_CMAKE_PATH}" ]]; then
 else
   # Drop a previous core from the CMake cache when building the dummy NRO/VPK/WASM.
   CMAKE_CORE_ARGS=(-DROMBUNDLER_CORE_LIBRARY=)
+fi
+
+CMAKE_ROM_ARGS=()
+if [[ "${PLATFORM}" == "wasm" ]]; then
+  if [[ -n "${ROM_CMAKE_PATH}" ]]; then
+    CMAKE_ROM_ARGS=(-DROMBUNDLER_WASM_ROM="${ROM_CMAKE_PATH}")
+  else
+    CMAKE_ROM_ARGS=(-DROMBUNDLER_WASM_ROM=)
+  fi
 fi
 
 run_in_image() {
@@ -286,5 +335,6 @@ run_in_image() {
 run_in_image cmake --preset "${PRESET}" \
   -DROMBUNDLER_VERSION="${VERSION}" \
   -DROMBUNDLER_CORE_NAME="${CORE_NAME}" \
-  "${CMAKE_CORE_ARGS[@]}"
+  "${CMAKE_CORE_ARGS[@]}" \
+  "${CMAKE_ROM_ARGS[@]}"
 run_in_image cmake --build --preset "${PRESET}"

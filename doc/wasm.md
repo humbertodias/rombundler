@@ -62,7 +62,19 @@ window_height = 600
 port0 = 1
 ```
 
-`core =` does not load a library on WASM. Keep it as `dummy` (or any name without `.so` / `.js`). To ship a real ROM, rebuild with `--preload-file` changes under `cmake/platforms/WebAssembly.cmake` (or extend the preload dir) and point `rom=` at that path.
+`core =` does not load a library on WASM. Keep it as `dummy` (or any name without `.so` / `.js`).
+
+To ship a real ROM with Genesis (or another static core), bake it in at build time:
+
+```shell
+bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
+```
+
+That preloads the file at `/game.md` (extension kept; basename sanitized so spaces in the host path do not break `emcc`) and rewrites `/config.ini` so `rom=` points there. Genesis needs a real Mega Drive ROM (`need_fullpath`); `/dummy.bin` alone will not boot a game.
+
+## RGB565 log line
+
+`Frontend supports RGB565 - will use that instead of XRGB1555.` is normal Genesis INFO during `retro_load_game`, not a failure. If the canvas stays black after that, rebuild with the GLES `GL_RGB565` texture fix and a real `--rom`.
 
 ## Static core
 
@@ -71,6 +83,8 @@ Build core + WASM package in one step:
 ```shell
 bash build.sh wasm --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 # or: bash build.sh wasm --fetch-core genesis
+# with ROM baked into rombundler.data:
+bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
 ```
 
 Genesis (and other `STATIC_LINKING` cores) may write a misnamed `*_emscripten.bc` that is really an `ar` archive; `cores.sh` / `build.sh` rename it to `.a` before linking. WASM core builds use `emmake` so objects are wasm32, not host ELF.

@@ -24,9 +24,10 @@ bash build.sh vita
 bash build.sh vita --fetch-core genesis
 bash build.sh wasm
 bash build.sh wasm --fetch-core genesis
+bash build.sh wasm --fetch-core genesis --rom game.md
 ```
 
-`--fetch-core` (switch / vita / wasm only) runs [`cores.sh`](cores.sh) in the same image, then links the resulting `.a` / `.bc` into ROMBundler. Pass a git URL or a short alias (`genesis`). Or pass an existing archive path / `--core` as before.
+`--fetch-core` (switch / vita / wasm only) runs [`cores.sh`](cores.sh) in the same image, then links the resulting `.a` / `.bc` into ROMBundler. Pass a git URL or a short alias (`genesis`). Or pass an existing archive path / `--core` as before. WASM also accepts `--rom` to preload a game into the Emscripten FS (required for Genesis — it will not run on `/dummy.bin`).
 
 Each command runs `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop links GLFW and OpenAL-Soft statically. Switch and Vita have no GLFW/OpenAL. WASM uses Emscripten ports. Zips land in `dist/` as `ROMBundler-<port>-<core>-<version>-<arch>.zip` (`core` is `dummy` unless you pass `--fetch-core` / a `.a`).
 

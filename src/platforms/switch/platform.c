@@ -202,8 +202,9 @@ int platform_has_audio(void)
 	return 1;
 }
 
-int platform_gl_check_proc_pointers(void)
+int platform_gl_entry_points_ok(void)
 {
+	/* Mesa libglad links entry points; treat as always present after load. */
 	return 1;
 }
 

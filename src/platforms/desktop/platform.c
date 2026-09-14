@@ -77,8 +77,12 @@ int platform_has_audio(void)
 	return 1;
 }
 
-int platform_gl_check_proc_pointers(void)
+int platform_gl_entry_points_ok(void)
 {
+	if (!glTexImage2D)
+		return 0;
+	if (platform_use_glsl_shaders() && (!glCreateShader || !glGenVertexArrays))
+		return 0;
 	return 1;
 }
 
