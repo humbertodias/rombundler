@@ -5,13 +5,8 @@
 #include <time.h>
 #include <stdbool.h>
 
-#ifdef __APPLE__
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
 #include <AL/al.h>
 #include <AL/alc.h>
-#endif
 
 #define BUFSIZE 1024*8
 #define NUMBUFFERS 4

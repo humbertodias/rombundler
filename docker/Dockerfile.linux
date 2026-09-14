@@ -1,0 +1,26 @@
+# Native Linux toolchain. GLFW and OpenAL-Soft are compiled as static .a at build time.
+#   docker build -t rombundler-linux -f docker/Dockerfile.linux docker/
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PORT=linux
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        git \
+        libasound2-dev \
+        libgl1-mesa-dev \
+        libpulse-dev \
+        ninja-build \
+        pkg-config \
+        xorg-dev \
+        zip \
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --system --add safe.directory '*'
+
+WORKDIR /src
+CMD ["bash"]

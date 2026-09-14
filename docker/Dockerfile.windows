@@ -1,0 +1,29 @@
+# MinGW-w64 toolchain for Windows x86_64. GLFW and OpenAL-Soft are built as static .a.
+#   docker build -t rombundler-windows -f docker/Dockerfile.windows docker/
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PORT=windows
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        binutils-mingw-w64-x86-64 \
+        ca-certificates \
+        cmake \
+        curl \
+        g++-mingw-w64-x86-64 \
+        gcc-mingw-w64-x86-64 \
+        git \
+        make \
+        mingw-w64-tools \
+        ninja-build \
+        pkg-config \
+        unzip \
+        zip \
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --system --add safe.directory '*' \
+    && (update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix || true) \
+    && (update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix || true)
+
+WORKDIR /src
+CMD ["bash"]
