@@ -271,6 +271,8 @@ int platform_gamepad_present(int port)
  * Desktop input.c passes GLFW_GAMEPAD_* indices. Emscripten's GLFW has no
  * glfwGetGamepadState; it exposes the HTML5 Standard Gamepad layout via
  * glfwGetJoystickButtons/Axes. Remap GLFW gamepad indices → HTML5.
+ *
+ * GLFW D-pad order is clockwise (UP, RIGHT, DOWN, LEFT), not U/D/L/R.
  */
 static int wasm_html5_button(int glfw_gamepad_button)
 {
@@ -278,7 +280,7 @@ static int wasm_html5_button(int glfw_gamepad_button)
 		0, 1, 2, 3, 4, 5, /* A B X Y LB RB */
 		8, 9, 16,          /* Back Start Guide */
 		10, 11,            /* L3 R3 */
-		12, 13, 14, 15     /* D-pad */
+		12, 15, 13, 14     /* D-pad: UP RIGHT DOWN LEFT → HTML5 12/15/13/14 */
 	};
 
 	if (glfw_gamepad_button < 0 ||
