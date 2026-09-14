@@ -1,0 +1,77 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Load versions
+        run: grep -vE '^\s*(#|$)' versions.env >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile.wasm
+          tags: rombundler-wasm
+          load: true
+          provenance: false
+          platforms: linux/amd64
+          cache-from: type=gha,scope=rombundler-wasm
+          cache-to: type=gha,mode=max,scope=rombundler-wasm
+
+      - name: Build WASM
+        env:
+          SKIP_DOCKER_BUILD: "1"
+        run: bash build.sh wasm
+
+      - name: Stage site
+        run: |
+          set -euo pipefail
+          SITE=dist/pages
+          SRC=$(echo dist/ROMBundler-WASM-*-wasm32)
+          test -d "${SRC}"
+          mkdir -p "${SITE}"
+          cp "${SRC}/rombundler.js" "${SITE}/"
+          cp "${SRC}/rombundler.wasm" "${SITE}/"
+          cp "${SRC}/rombundler.data" "${SITE}/"
+          # Root URL serves index.html; keep Emscripten asset basenames.
+          cp "${SRC}/rombundler.html" "${SITE}/index.html"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

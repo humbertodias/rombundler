@@ -10,7 +10,7 @@ It is based on this example libretro frontend https://github.com/heuripedes/nano
 
 The frontend is driven by an ini file instead of command-line flags so a core and a ROM can ship as one folder (desktop), one NRO (Switch), one VPK (Vita), or one WASM package (browser). Desktop uses glad and OpenAL; Switch uses Mesa EGL and libnx `audout`; Vita uses vitaGL and `sceAudioOut`; WASM uses Emscripten GLFW3, WebGL2, and OpenAL.
 
-Usage: [doc/desktop.md](doc/desktop.md) (Linux, Windows, macOS), [doc/switch.md](doc/switch.md) (Nintendo Switch), [doc/vita.md](doc/vita.md) (PlayStation Vita), and [doc/wasm.md](doc/wasm.md) (WebAssembly).
+Usage: [doc/desktop.md](doc/desktop.md) (Linux, Windows, macOS), [doc/switch.md](doc/switch.md) (Nintendo Switch), [doc/vita.md](doc/vita.md) (PlayStation Vita), and [doc/wasm.md](doc/wasm.md) (WebAssembly). Browser demo: https://humbertodias.github.io/rombundler/
 
 # Compiling
 
