@@ -7,9 +7,9 @@
 #   bash build.sh macos arm64
 #   bash build.sh switch
 #   bash build.sh switch /path/to/core_libretro.a
-#   bash build.sh vita
+#   bash build.sh switch --fetch-core genesis
+#   bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 #   bash build.sh vita /path/to/core_libretro.a
-#   bash build.sh wasm
 #   bash build.sh wasm /path/to/core_libretro.a
 #   bash build.sh switch --core /path/to/core_libretro.a
 #   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
@@ -22,9 +22,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
-USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a]
+USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--fetch-core url|alias]
        $0 macos [x86_64|arm64] [shell|sdk]
-       $0 switch|vita|wasm /path/to/core_libretro.a"
+       $0 switch|vita|wasm /path/to/core_libretro.a
+       $0 switch|vita|wasm --fetch-core genesis"
 
 set -a
 # shellcheck disable=SC1091
@@ -49,6 +50,25 @@ esac
 WANT_SHELL=0
 MAC_ARCH=""
 CORE_LIBRARY="${ROMBUNDLER_CORE_LIBRARY:-}"
+FETCH_CORE=""
+CORE_NAME="${ROMBUNDLER_CORE_NAME:-dummy}"
+
+# Label used in dist/ROMBundler-<port>-<core>-<ver>-<arch>.zip
+core_label_from() {
+  local raw="$1"
+  local n
+  n="$(basename "${raw}" .git)"
+  n="${n%.git}"
+  n="${n%.a}"
+  n="${n%.bc}"
+  n="${n%_libretro*}"
+  # Keep filesystem-safe characters only.
+  n="$(printf '%s' "${n}" | tr -c 'A-Za-z0-9._+-' '-' | sed -E 's/-+/-/g; s/^-+//; s/-+$//')"
+  if [[ -z "${n}" ]]; then
+    n="dummy"
+  fi
+  printf '%s' "${n}"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -68,11 +88,23 @@ while [[ $# -gt 0 ]]; do
       CORE_LIBRARY="${1#--core=}"
       shift
       ;;
+    --fetch-core)
+      FETCH_CORE="${2:-}"
+      if [[ -z "${FETCH_CORE}" ]]; then
+        echo "${USAGE}" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    --fetch-core=*)
+      FETCH_CORE="${1#--fetch-core=}"
+      shift
+      ;;
     x86_64|amd64|arm64|aarch64|static)
       MAC_ARCH="$1"
       shift
       ;;
-    *.a)
+    *.a|*.bc)
       CORE_LIBRARY="$1"
       shift
       ;;
@@ -87,6 +119,20 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "${FETCH_CORE}" ]]; then
+  case "${PLATFORM}" in
+    switch|vita|wasm) ;;
+    *)
+      echo "--fetch-core only works with switch|vita|wasm" >&2
+      exit 1
+      ;;
+  esac
+  if [[ -n "${CORE_LIBRARY}" ]]; then
+    echo "use either --fetch-core or --core / path.a, not both" >&2
+    exit 1
+  fi
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required (https://docs.docker.com/get-docker/)." >&2
@@ -114,6 +160,29 @@ if [[ "${SKIP_DOCKER_BUILD:-}" != "1" ]]; then
   fi
 fi
 
+# Build static core first (same image), then link it into the frontend.
+if [[ -n "${FETCH_CORE}" ]]; then
+  echo "fetch-core: ${FETCH_CORE}"
+  CORE_NAME="$(core_label_from "${FETCH_CORE}")"
+  # Resolve aliases the same way cores.sh does for a stable zip name.
+  case "${FETCH_CORE}" in
+    genesis|Genesis-Plus-GX|genesis_plus_gx)
+      CORE_NAME="$(core_label_from "Genesis-Plus-GX")"
+      ;;
+  esac
+  SKIP_DOCKER_BUILD=1 bash "${ROOT}/cores.sh" "${PLATFORM}" "${FETCH_CORE}"
+  shopt -s nullglob
+  _arts=("${ROOT}/cores/${PLATFORM}"/*_libretro*.a "${ROOT}/cores/${PLATFORM}"/*_libretro*.bc)
+  shopt -u nullglob
+  if [[ ${#_arts[@]} -eq 0 ]]; then
+    echo "cores.sh produced no archive under cores/${PLATFORM}/" >&2
+    exit 1
+  fi
+  # Newest mtime wins if several cores were built earlier.
+  CORE_LIBRARY="$(ls -t "${_arts[@]}" | head -n1)"
+  echo "using core: ${CORE_LIBRARY}"
+fi
+
 DOCKER_MOUNTS=(-v "${ROOT}:/src")
 CORE_CMAKE_PATH=""
 
@@ -121,6 +190,9 @@ if [[ -n "${CORE_LIBRARY}" ]]; then
   if [[ ! -f "${CORE_LIBRARY}" ]]; then
     echo "core library not found: ${CORE_LIBRARY}" >&2
     exit 1
+  fi
+  if [[ -z "${FETCH_CORE}" ]]; then
+    CORE_NAME="$(core_label_from "${CORE_LIBRARY}")"
   fi
   CORE_ABS="$(cd "$(dirname "${CORE_LIBRARY}")" && pwd)/$(basename "${CORE_LIBRARY}")"
   if [[ "${CORE_ABS}" == "${ROOT}/"* ]]; then
@@ -169,6 +241,7 @@ fi
 echo "image: ${IMAGE}"
 echo "preset: ${PRESET}"
 echo "version: ${VERSION}"
+echo "core-name: ${CORE_NAME}"
 if [[ -n "${CORE_CMAKE_PATH}" ]]; then
   echo "core: ${CORE_CMAKE_PATH}"
 fi
@@ -194,5 +267,6 @@ run_in_image() {
 
 run_in_image cmake --preset "${PRESET}" \
   -DROMBUNDLER_VERSION="${VERSION}" \
+  -DROMBUNDLER_CORE_NAME="${CORE_NAME}" \
   "${CMAKE_CORE_ARGS[@]}"
 run_in_image cmake --build --preset "${PRESET}"

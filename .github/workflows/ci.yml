@@ -10,6 +10,10 @@ on:
       publish_release:
         type: boolean
         default: false
+      core_url:
+        description: "Libretro core git URL (empty = dummy)"
+        type: string
+        default: ""
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -58,19 +62,19 @@ jobs:
             artifact: switch-aarch64
             runner: ubuntu-24.04
             extra: ""
-            timeout: 45
+            timeout: 90
             docker_platforms: linux/amd64
           - platform: vita
             artifact: vita-arm
             runner: ubuntu-24.04
             extra: ""
-            timeout: 45
+            timeout: 90
             docker_platforms: linux/amd64
           - platform: wasm
             artifact: wasm-wasm32
             runner: ubuntu-24.04
             extra: ""
-            timeout: 45
+            timeout: 90
             docker_platforms: linux/amd64
 
     steps:
@@ -108,12 +112,30 @@ jobs:
       - name: Build
         env:
           SKIP_DOCKER_BUILD: "1"
-        run: bash build.sh ${{ matrix.platform }} ${{ matrix.extra }}
+          CORE_URL: ${{ inputs.core_url || '' }}
+        run: |
+          set -euo pipefail
+          args=(${{ matrix.platform }})
+          if [[ -n "${{ matrix.extra }}" ]]; then
+            args+=(${{ matrix.extra }})
+          fi
+          core_slug=dummy
+          if [[ -n "${CORE_URL}" ]]; then
+            case "${{ matrix.platform }}" in
+              switch|vita|wasm)
+                args+=(--fetch-core "${CORE_URL}")
+                core_slug="$(basename "${CORE_URL}" .git)"
+                ;;
+            esac
+          fi
+          echo "CORE_SLUG=${core_slug}" >> "$GITHUB_ENV"
+          echo "build.sh ${args[*]}"
+          bash build.sh "${args[@]}"
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ROMBundler-${{ matrix.artifact }}
+          name: ROMBundler-${{ matrix.artifact }}-${{ env.CORE_SLUG }}
           path: dist/ROMBundler-*/*
           if-no-files-found: error
           retention-days: 14

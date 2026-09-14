@@ -5,6 +5,7 @@ project (rombundler C CXX)
 set (CMAKE_C_STANDARD 11)
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (ROMBUNDLER_VERSION "devel" CACHE STRING "Bundle version string")
+set (ROMBUNDLER_CORE_NAME "dummy" CACHE STRING "Core label in dist zip/folder names")
 
 include ("${CMAKE_SOURCE_DIR}/cmake/Package.cmake")
 
@@ -51,7 +52,7 @@ set (ROMBUNDLER_SOURCES
   src/srm.c
 )
 
-set (BUNDLE_NAME "ROMBundler-${ROMBUNDLER_PORT_OS}-${ROMBUNDLER_VERSION}-${ROMBUNDLER_ARCH}")
+set (BUNDLE_NAME "ROMBundler-${ROMBUNDLER_PORT_OS}-${ROMBUNDLER_CORE_NAME}-${ROMBUNDLER_VERSION}-${ROMBUNDLER_ARCH}")
 set (DIST_DIR "${CMAKE_SOURCE_DIR}/dist")
 set (STAGE_DIR "${DIST_DIR}/${BUNDLE_NAME}")
 set (BUNDLE_ZIP "${DIST_DIR}/${BUNDLE_NAME}.zip")

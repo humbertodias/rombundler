@@ -18,13 +18,17 @@ bash build.sh macos
 bash build.sh macos arm64
 bash build.sh switch
 bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh switch --fetch-core genesis
+bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 bash build.sh vita
-bash build.sh vita /path/to/genesis_plus_gx_libretro.a
+bash build.sh vita --fetch-core genesis
 bash build.sh wasm
-bash build.sh wasm /path/to/core_libretro.a
+bash build.sh wasm --fetch-core genesis
 ```
 
-Each command runs `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop links GLFW and OpenAL-Soft statically. Switch and Vita have no GLFW/OpenAL. WASM uses Emscripten ports. Zips land in `dist/`.
+`--fetch-core` (switch / vita / wasm only) runs [`cores.sh`](cores.sh) in the same image, then links the resulting `.a` / `.bc` into ROMBundler. Pass a git URL or a short alias (`genesis`). Or pass an existing archive path / `--core` as before.
+
+Each command runs `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop links GLFW and OpenAL-Soft statically. Switch and Vita have no GLFW/OpenAL. WASM uses Emscripten ports. Zips land in `dist/` as `ROMBundler-<port>-<core>-<version>-<arch>.zip` (`core` is `dummy` unless you pass `--fetch-core` / a `.a`).
 
 ### Toolchain shell
 
@@ -60,5 +64,27 @@ Static cores (Switch / Vita / WASM):
 cmake --preset switch -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a
 cmake --build --preset switch
 ```
+
+## Static libretro cores (`.a`)
+
+Two steps under the hood (core archive, then frontend link). One command:
+
+```shell
+bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+bash build.sh switch --fetch-core genesis
+```
+
+Or keep them separate with [`cores.sh`](cores.sh):
+
+```shell
+bash cores.sh switch https://github.com/libretro/Genesis-Plus-GX.git
+bash build.sh switch cores/switch/genesis_plus_gx_libretro_libnx.a
+```
+
+Archives land in `cores/<port>/` (gitignored). Optional make knobs: `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis`.
+
+CI: [`.github/workflows/cores.yml`](.github/workflows/cores.yml) builds `matrix.core_url` × switch/vita/wasm. Add more URLs under `core_url:` in that file.
+
+CD ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)): on **workflow_dispatch**, optional input `core_url` runs `--fetch-core` for switch/vita/wasm (desktop stays unchanged). Leave empty for the dummy core. GitHub **release** still publishes with the dummy core by default.
 
 Per-port notes: [doc/desktop.md](doc/desktop.md), [doc/switch.md](doc/switch.md), [doc/vita.md](doc/vita.md), [doc/wasm.md](doc/wasm.md).

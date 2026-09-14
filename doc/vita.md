@@ -79,18 +79,19 @@ The `dummy.bin` from the VPK is already at `app0:/dummy.bin`. On the host that w
 
 ## Static core (Genesis Plus GX)
 
-Build the core as a vitasdk archive (not a RetroArch VPK):
+Build the core and VPK in one step:
 
 ```shell
-git clone --depth 1 https://github.com/libretro/Genesis-Plus-GX.git
-cd Genesis-Plus-GX
-make -f Makefile.libretro platform=vita -j$(nproc)
+bash build.sh vita --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+# or: bash build.sh vita --fetch-core genesis
 ```
 
-That produces `genesis_plus_gx_libretro.a`. For cartridge ROMs (`.md`) only, `HAVE_CHD=0` on that `make` line skips libchdr.
+For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh vita --fetch-core genesis` skips libchdr.
+
+Or pass an existing archive:
 
 ```shell
-bash build.sh vita /path/to/genesis_plus_gx_libretro.a
+bash build.sh vita cores/vita/genesis_plus_gx_libretro_vita.a
 ```
 
 Install the **new** VPK from `dist/`.

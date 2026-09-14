@@ -51,7 +51,13 @@ jobs:
         run: |
           set -euo pipefail
           SITE=dist/pages
-          SRC=$(echo dist/ROMBundler-WASM-*-wasm32)
+          SRC=$(echo dist/ROMBundler-WASM-*-wasm32 | awk '{print $1}')
+          # Prefer dummy Pages build if several WASM stage dirs exist.
+          for d in dist/ROMBundler-WASM-*-wasm32; do
+            case "$d" in
+              *-dummy-*) SRC=$d; break ;;
+            esac
+          done
           test -d "${SRC}"
           mkdir -p "${SITE}"
           cp "${SRC}/rombundler.js" "${SITE}/"

@@ -9,5 +9,8 @@ save.srm
 .idea
 .cache/
 dist/
+cores/
 .deps/
 build-*/
+*.a
+*.bc

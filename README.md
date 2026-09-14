@@ -19,4 +19,4 @@ Based on [nanoarch](https://github.com/heuripedes/nanoarch). Configured with `co
 
 ## Build
 
-See [BUILD.md](BUILD.md).
+See [BUILD.md](BUILD.md). Static cores: [`cores.sh`](cores.sh) + [Cores workflow](.github/workflows/cores.yml).
