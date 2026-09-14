@@ -38,7 +38,7 @@ cmake --build --preset wasm
 
 With a core: `cmake --preset wasm -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Zips land in `dist/`. `bash build.sh wasm` with no `.a` goes back to the dummy core.
 
-Video is WebGL2 / GLES3 (`shader=` in `config.ini` is used). Audio is OpenAL via Emscripten (non-blocking; drops buffers instead of spinning). Input uses the desktop keyboard map (Z/X/arrows/Enter, etc.). The Emscripten GLFW port does not expose gamepad APIs yet, so USB/Bluetooth pads are not wired in this build.
+Video is WebGL2 / GLES3 (`shader=` in `config.ini` is used). Audio is OpenAL via Emscripten (non-blocking; drops buffers instead of spinning). Input uses the desktop keyboard map (Z/X/arrows/Enter, etc.) plus browser gamepads through GLFW’s joystick API (`navigator.getGamepads`). Click the canvas once so the browser unlocks the Gamepad API. Mapping assumes the HTML5 Standard Gamepad layout (Xbox-style).
 
 ## config.ini
 

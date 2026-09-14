@@ -129,7 +129,7 @@ int platform_boot(struct config *cfg)
 	glfwSetErrorCallback(error_cb);
 	if (!glfwInit())
 		die("Failed to initialize GLFW");
-	/* Emscripten's GLFW port has no gamepad mapping API; keyboard still works. */
+	/* Joystick via HTML5 Gamepad API (glfwGetJoystick*); no glfwGetGamepadState. */
 	return 1;
 }
 
@@ -264,20 +264,65 @@ void platform_cursor_pos(double *x, double *y)
 
 int platform_gamepad_present(int port)
 {
-	(void)port;
-	return 0;
+	return glfwJoystickPresent(port) == GLFW_TRUE;
+}
+
+/*
+ * Desktop input.c passes GLFW_GAMEPAD_* indices. Emscripten's GLFW has no
+ * glfwGetGamepadState; it exposes the HTML5 Standard Gamepad layout via
+ * glfwGetJoystickButtons/Axes. Remap GLFW gamepad indices → HTML5.
+ */
+static int wasm_html5_button(int glfw_gamepad_button)
+{
+	static const int map[] = {
+		0, 1, 2, 3, 4, 5, /* A B X Y LB RB */
+		8, 9, 16,          /* Back Start Guide */
+		10, 11,            /* L3 R3 */
+		12, 13, 14, 15     /* D-pad */
+	};
+
+	if (glfw_gamepad_button < 0 ||
+	    glfw_gamepad_button >= (int)(sizeof(map) / sizeof(map[0])))
+		return -1;
+	return map[glfw_gamepad_button];
 }
 
 int platform_gamepad_button(int port, int button)
 {
-	(void)port;
-	(void)button;
-	return 0;
+	int count = 0;
+	int html5 = wasm_html5_button(button);
+	const unsigned char *buttons;
+
+	if (html5 < 0)
+		return 0;
+	buttons = glfwGetJoystickButtons(port, &count);
+	if (!buttons || html5 >= count)
+		return 0;
+	return buttons[html5] == GLFW_PRESS;
 }
 
 float platform_gamepad_axis(int port, int axis)
 {
-	(void)port;
-	(void)axis;
+	int count = 0;
+	const float *axes = glfwGetJoystickAxes(port, &count);
+
+	if (axis >= 0 && axis <= 3) {
+		if (!axes || axis >= count)
+			return 0.f;
+		return axes[axis];
+	}
+
+	/* L2/R2: HTML5 usually puts triggers on buttons 6/7 (pressed only here). */
+	if (axis == GLFW_GAMEPAD_AXIS_LEFT_TRIGGER ||
+	    axis == GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER) {
+		int bcount = 0;
+		const unsigned char *buttons = glfwGetJoystickButtons(port, &bcount);
+		int bi = (axis == GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) ? 6 : 7;
+
+		if (buttons && bi < bcount && buttons[bi] == GLFW_PRESS)
+			return 1.f;
+		if (axes && axis < count)
+			return axes[axis];
+	}
 	return 0.f;
 }
