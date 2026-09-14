@@ -67,23 +67,26 @@ void retro_reset(void)
 
 void retro_run(void)
 {
+	static const uint16_t colors[8] = {
+		0xF800, 0x07E0, 0x001F, 0xFFE0, 0x07FF, 0xF81F, 0xFFFF, 0x4208
+	};
+	static int16_t silence[800 * 2];
+	unsigned x, y;
+
 	if (input_poll_cb)
 		input_poll_cb();
+
 	tick++;
-	for (int y = 0; y < HEIGHT; y++) {
-		for (int x = 0; x < WIDTH; x++) {
-			uint16_t r = (uint16_t)((x + tick) & 31);
-			uint16_t g = (uint16_t)((y + tick / 2) & 63);
-			uint16_t b = (uint16_t)((x / 2 + y / 2) & 31);
-			frame[y * WIDTH + x] = (r << 11) | (g << 5) | b;
+	for (y = 0; y < HEIGHT; y++) {
+		for (x = 0; x < WIDTH; x++) {
+			unsigned bar = ((x + (tick / 2)) * 8 / WIDTH) & 7;
+			frame[y * WIDTH + x] = colors[bar];
 		}
 	}
 	if (video_cb)
-		video_cb(frame, WIDTH, HEIGHT, WIDTH * 2);
-	int16_t silence[1600 * 2];
-	memset(silence, 0, sizeof(silence));
+		video_cb(frame, WIDTH, HEIGHT, WIDTH * sizeof(uint16_t));
 	if (audio_batch_cb)
-		audio_batch_cb(silence, 1600);
+		audio_batch_cb(silence, 800);
 	(void)audio_cb;
 	(void)input_state_cb;
 }
