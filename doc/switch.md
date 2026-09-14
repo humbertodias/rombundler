@@ -57,18 +57,19 @@ SRAM is `sdmc:/switch/rombundler/save.srm`. Fatal errors are shown on screen and
 
 ## Static core (Genesis Plus GX)
 
-Build the core as a libnx archive (not the RetroArch NRO):
+Build the core as a libnx archive and link it in one step:
 
 ```shell
-git clone --depth 1 https://github.com/libretro/Genesis-Plus-GX.git
-cd Genesis-Plus-GX
-make -f Makefile.libretro platform=libnx -j$(nproc)
+bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+# or: bash build.sh switch --fetch-core genesis
 ```
 
-That produces `genesis_plus_gx_libretro_libnx.a`. You cannot extract a `.a` from `genesis_plus_gx_libretro_libnx.nro`. For cartridge ROMs (`.md`) only, `HAVE_CHD=0` on that `make` line skips libchdr.
+That runs `cores.sh` then packages the NRO with `cores/switch/genesis_plus_gx_libretro_libnx.a`. For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis` skips libchdr.
+
+Or pass an existing archive:
 
 ```shell
-bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh switch cores/switch/genesis_plus_gx_libretro_libnx.a
 ```
 
 Install the **new** NRO from `dist/`.

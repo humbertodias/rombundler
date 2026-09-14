@@ -11,7 +11,7 @@ Desktop (Linux, Windows, macOS): [desktop.md](desktop.md). Nintendo Switch: [swi
 Browsers block WASM from `file://`. Serve the zip contents over HTTP:
 
 ```shell
-cd dist/ROMBundler-WASM-*-wasm32   # or unzip the release zip
+cd dist/ROMBundler-WASM-*-wasm32   # e.g. ROMBundler-WASM-dummy-…-wasm32
 python3 -m http.server 8080
 ```
 
@@ -66,10 +66,17 @@ port0 = 1
 
 ## Static core
 
-Build the core with Emscripten as a static archive, then:
+Build core + WASM package in one step (`Makefile.libretro` → often a `.bc`):
 
 ```shell
-bash build.sh wasm /path/to/your_libretro.a
+bash build.sh wasm --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+# or: bash build.sh wasm --fetch-core genesis
 ```
 
-The `.a` may live outside this repo; `build.sh` bind-mounts it into Docker.
+Or pass an existing archive:
+
+```shell
+bash build.sh wasm cores/wasm/genesis_plus_gx_libretro_emscripten.bc
+```
+
+Change the git URL (or the Cores workflow matrix) to build a different core.

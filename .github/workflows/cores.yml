@@ -1,0 +1,70 @@
+name: Cores
+
+# Build static libretro archives inside each port image.
+# Add more URLs under matrix.core_url (each URL × switch / vita / wasm).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+    paths:
+      - cores.sh
+      - docker/Dockerfile.switch
+      - docker/Dockerfile.vita
+      - docker/Dockerfile.wasm
+      - .github/workflows/cores.yml
+
+concurrency:
+  group: cores-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.port }} - ${{ matrix.core_url }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        port: [switch, vita, wasm]
+        core_url:
+          - https://github.com/libretro/Genesis-Plus-GX.git
+          # - https://github.com/libretro/beetle-ngp-libretro.git
+          # - https://github.com/libretro/snes9x.git
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Core slug
+        id: meta
+        run: echo "core_name=$(basename '${{ matrix.core_url }}' .git)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile.${{ matrix.port }}
+          tags: rombundler-${{ matrix.port }}
+          load: true
+          provenance: false
+          platforms: linux/amd64
+          cache-from: type=gha,scope=rombundler-${{ matrix.port }}
+          cache-to: type=gha,mode=max,scope=rombundler-${{ matrix.port }}
+
+      - name: Build core
+        env:
+          SKIP_DOCKER_BUILD: "1"
+        run: bash cores.sh ${{ matrix.port }} '${{ matrix.core_url }}'
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-${{ matrix.port }}-${{ steps.meta.outputs.core_name }}
+          path: |
+            cores/${{ matrix.port }}/*.a
+            cores/${{ matrix.port }}/*.bc
+          if-no-files-found: error
+          retention-days: 14

@@ -3,6 +3,13 @@ name: CD
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      core_url:
+        description: "Libretro core git URL (empty = dummy core)"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
@@ -14,5 +21,7 @@ jobs:
     permissions:
       contents: write
     with:
-      publish_release: true
+      publish_release: ${{ github.event_name == 'release' }}
+      # release → dummy; workflow_dispatch → optional URL
+      core_url: ${{ inputs.core_url || '' }}
     secrets: inherit
