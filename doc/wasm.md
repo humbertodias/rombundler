@@ -6,7 +6,7 @@ Desktop (Linux, Windows, macOS): [desktop.md](desktop.md). Nintendo Switch: [swi
 
 ## Run
 
-Demo (GitHub Pages, after the Pages workflow has run on `main`): https://humbertodias.github.io/rombundler/
+[Play the dummy build in the browser](https://humbertodias.github.io/rombundler/) (GitHub Pages).
 
 Browsers block WASM from `file://`. Serve the zip contents over HTTP:
 
