@@ -1,0 +1,58 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux",
+      "inherits": "base",
+      "displayName": "Linux host",
+      "binaryDir": "${sourceDir}/build-linux"
+    },
+    {
+      "name": "windows",
+      "inherits": "base",
+      "displayName": "Windows x86_64 (MinGW-w64)",
+      "binaryDir": "${sourceDir}/build-windows",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/mingw-w64-x86_64.cmake"
+    },
+    {
+      "name": "macos",
+      "inherits": "base",
+      "displayName": "macOS host (native clang)",
+      "binaryDir": "${sourceDir}/build-macos"
+    },
+    {
+      "name": "macos-x86_64",
+      "inherits": "base",
+      "displayName": "macOS x86_64 (osxcross)",
+      "binaryDir": "${sourceDir}/build-macos-x86_64",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/osxcross-x86_64.cmake"
+    },
+    {
+      "name": "macos-arm64",
+      "inherits": "base",
+      "displayName": "macOS arm64 (osxcross)",
+      "binaryDir": "${sourceDir}/build-macos-arm64",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/osxcross-arm64.cmake"
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux", "configurePreset": "linux" },
+    { "name": "windows", "configurePreset": "windows" },
+    { "name": "macos", "configurePreset": "macos" },
+    { "name": "macos-x86_64", "configurePreset": "macos-x86_64" },
+    { "name": "macos-arm64", "configurePreset": "macos-arm64" }
+  ]
+}

@@ -9,3 +9,4 @@ save.srm
 .idea
 dist/
 .deps/
+build-*/

@@ -1,4 +1,4 @@
-# Native Linux toolchain. GLFW and OpenAL-Soft are compiled as static .a at build time.
+# Native Linux toolchain. cmake --preset linux
 #   docker build -t rombundler-linux -f docker/Dockerfile.linux docker/
 
 FROM ubuntu:24.04

@@ -27,12 +27,15 @@ bash scripts/build.sh macos
 bash scripts/build.sh macos arm64
 ```
 
-Zips land in `dist/`. GLFW and OpenAL-Soft are compiled as static `.a` inside each port image (no bundled DLLs). Open a shell with `bash scripts/build.sh linux shell` (or `windows` / `macos`).
+Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`). GLFW and OpenAL-Soft are fetched and linked statically. Zips land in `dist/`.
 
-With a local toolchain you can still compile on the host:
+Open a toolchain shell with `bash scripts/build.sh linux shell` (or `windows` / `macos`).
+
+With a local compiler, CMake 3.24+, and Ninja:
 
 ```shell
-make
+cmake --preset linux    # or macos on Darwin
+cmake --build --preset linux
 ```
 
 # Usage

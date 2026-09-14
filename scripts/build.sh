@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Build artifacts in a toolchain image. Ports stay decoupled:
-#   docker/Dockerfile.<port> + scripts/<port>/compile.sh
+# Toolchain image + cmake --preset. Ports stay decoupled (Dockerfile + preset).
 #
 #   bash scripts/build.sh linux
 #   bash scripts/build.sh windows
@@ -66,12 +65,11 @@ if [[ "${SECOND}" == "shell" ]]; then
     "${IMAGE}" bash
 fi
 
-MACOS_ARCH="x86_64"
+PRESET="${PLATFORM}"
 if [[ "${PLATFORM}" == "macos" ]]; then
   case "${SECOND}" in
-    ""|static) MACOS_ARCH="x86_64" ;;
-    arm64|aarch64) MACOS_ARCH="arm64" ;;
-    x86_64|amd64) MACOS_ARCH="x86_64" ;;
+    ""|static|x86_64|amd64) PRESET="macos-x86_64" ;;
+    arm64|aarch64) PRESET="macos-arm64" ;;
     *)
       echo "${USAGE}" >&2
       exit 1
@@ -90,20 +88,23 @@ if [[ -z "${VERSION:-}" ]]; then
 fi
 
 echo "image: ${IMAGE}"
-echo "port: ${PLATFORM}"
+echo "preset: ${PRESET}"
 echo "version: ${VERSION}"
-if [[ "${PLATFORM}" == "macos" ]]; then
-  echo "arch: ${MACOS_ARCH}"
-fi
 
 docker run --rm \
   -u "$(id -u):$(id -g)" \
   -v "${ROOT}:/src" \
   -w /src \
   -e HOME=/tmp \
-  -e VERSION="${VERSION}" \
-  -e GLFW_VERSION="${GLFW_VERSION:-3.4}" \
-  -e OPENAL_VERSION="${OPENAL_VERSION:-1.24.2}" \
-  -e MACOS_ARCH="${MACOS_ARCH}" \
   "${IMAGE}" \
-  bash "/src/scripts/${PLATFORM}/compile.sh"
+  cmake --preset "${PRESET}" \
+    -DROMBUNDLER_VERSION="${VERSION}" \
+    -DROMBUNDLER_GLFW_VERSION="${GLFW_VERSION:-3.4}" \
+    -DROMBUNDLER_OPENAL_VERSION="${OPENAL_VERSION:-1.24.2}" \
+  && docker run --rm \
+  -u "$(id -u):$(id -g)" \
+  -v "${ROOT}:/src" \
+  -w /src \
+  -e HOME=/tmp \
+  "${IMAGE}" \
+  cmake --build --preset "${PRESET}"

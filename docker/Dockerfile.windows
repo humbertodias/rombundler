@@ -1,4 +1,4 @@
-# MinGW-w64 toolchain for Windows x86_64. GLFW and OpenAL-Soft are built as static .a.
+# MinGW-w64 toolchain for Windows x86_64. cmake --preset windows
 #   docker build -t rombundler-windows -f docker/Dockerfile.windows docker/
 
 FROM ubuntu:24.04
