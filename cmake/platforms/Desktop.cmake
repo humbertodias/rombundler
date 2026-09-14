@@ -4,7 +4,7 @@ include ("${CMAKE_SOURCE_DIR}/cmake/FetchDeps.cmake")
 
 set (ROMBUNDLER_PLATFORM_SOURCES
   "${CMAKE_SOURCE_DIR}/src/platforms/desktop/glad.c"
-  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/platform_glfw.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/platform.c"
   "${CMAKE_SOURCE_DIR}/src/platforms/desktop/audio.c"
   "${CMAKE_SOURCE_DIR}/src/platforms/desktop/input.c"
 )
