@@ -1,62 +1,23 @@
 [![CI](https://github.com/humbertodias/rombundler/actions/workflows/ci.yml/badge.svg)](https://github.com/humbertodias/rombundler/actions/workflows/ci.yml)
 [![CD](https://github.com/humbertodias/rombundler/actions/workflows/cd.yml/badge.svg)](https://github.com/humbertodias/rombundler/actions/workflows/cd.yml)
+[![Pages](https://github.com/humbertodias/rombundler/actions/workflows/pages.yml/badge.svg)](https://github.com/humbertodias/rombundler/actions/workflows/pages.yml)
 ![GitHub all downloads](https://img.shields.io/github/downloads/humbertodias/rombundler/total)
 
 # ROMBundler
 
-ROMBundler is a way to release your homebrew retro game as an executable.
+Ship a libretro core and a ROM as one package: folder (desktop), NRO (Switch), VPK (Vita) or WASM (browser).
 
-It is based on this example libretro frontend https://github.com/heuripedes/nanoarch
+Based on [nanoarch](https://github.com/heuripedes/nanoarch). Configured with `config.ini` instead of command-line flags.
 
-The frontend is driven by an ini file instead of command-line flags so a core and a ROM can ship as one folder (desktop), one NRO (Switch), one VPK (Vita), or one WASM package (browser). Desktop uses glad and OpenAL; Switch uses Mesa EGL and libnx `audout`; Vita uses vitaGL and `sceAudioOut`; WASM uses Emscripten GLFW3, WebGL2, and OpenAL.
+[Demo](https://humbertodias.github.io/rombundler/)
 
-Usage: [doc/desktop.md](doc/desktop.md) (Linux, Windows, macOS), [doc/switch.md](doc/switch.md) (Nintendo Switch), [doc/vita.md](doc/vita.md) (PlayStation Vita), and [doc/wasm.md](doc/wasm.md) (WebAssembly). Browser demo: https://humbertodias.github.io/rombundler/
+## Usage
 
-# Compiling
+- [Desktop](doc/desktop.md) (Linux, Windows, macOS)
+- [Nintendo Switch](doc/switch.md)
+- [PlayStation Vita](doc/vita.md)
+- [WebAssembly](doc/wasm.md)
 
-Dependencies:
+## Build
 
- * GLFW 3 and OpenAL (Linux, Windows, macOS; fetched by CMake)
- * OpenGL 2.1 (desktop), Mesa OpenGL 4.3 (Switch), vitaGL / GLSL ES (Vita), or WebGL2 / GLES3 (WASM)
- * libnx + switch-mesa (Switch)
- * vitasdk + vitaGL (Vita)
- * Emscripten (WASM)
-
-Dependency tags live in `versions.env`. Ports are built in **separate** Docker images. Only [Docker](https://www.docker.com/get-started/) is required:
-
-```shell
-bash build.sh linux
-bash build.sh windows
-bash build.sh macos
-bash build.sh macos arm64
-bash build.sh switch
-bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
-bash build.sh vita
-bash build.sh vita /path/to/genesis_plus_gx_libretro.a
-bash build.sh wasm
-bash build.sh wasm /path/to/core_libretro.a
-```
-
-Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop ports statically link GLFW and OpenAL-Soft. Switch uses libnx + Mesa EGL (no GLFW). Vita uses vitasdk + vitaGL (no GLFW). WASM uses Emscripten ports for GLFW3 and OpenAL. Zips land in `dist/`.
-
-Interactive toolchain shell (repo at `/src`):
-
-```shell
-bash build.sh linux shell
-bash build.sh windows shell
-bash build.sh macos shell
-bash build.sh switch shell
-bash build.sh vita shell
-bash build.sh wasm shell
-```
-
-`sdk` is an alias for `shell`. Then `cmake --preset switch` (or `vita` / `wasm` / `linux` / `windows` / `macos-x86_64`).
-
-Zed, VS Code, and Cursor can attach to the same images via [Dev Containers](https://containers.dev/) (`.devcontainer/`). The default is Linux; pick **Windows (MinGW)**, **macOS (osxcross)**, **Switch (devkitA64)**, **Vita (vitasdk)**, or **WASM (Emscripten)** in the config picker.
-
-With a local compiler, CMake 3.24+, and Ninja:
-
-```shell
-cmake --preset linux    # or macos on Darwin
-cmake --build --preset linux
-```
+See [BUILD.md](BUILD.md).
