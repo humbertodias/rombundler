@@ -10,13 +10,14 @@
 #   bash build.sh switch --core /path/to/core_libretro.a
 #   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
 #   bash build.sh linux shell
+#   bash build.sh switch sdk
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
-USAGE="usage: $0 linux|windows|switch [shell] [--core core.a]
-       $0 macos [x86_64|arm64] [shell]
+USAGE="usage: $0 linux|windows|switch [shell|sdk] [--core core.a]
+       $0 macos [x86_64|arm64] [shell|sdk]
        $0 switch /path/to/core_libretro.a"
 
 if [[ -f "${ROOT}/versions.env" ]]; then
@@ -47,7 +48,7 @@ CORE_LIBRARY="${ROMBUNDLER_CORE_LIBRARY:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    shell)
+    shell|sdk)
       WANT_SHELL=1
       shift
       ;;
@@ -126,15 +127,6 @@ if [[ -n "${CORE_LIBRARY}" ]]; then
   fi
 fi
 
-if [[ "${WANT_SHELL}" -eq 1 ]]; then
-  exec docker run --rm -it \
-    "${DOCKER_PLATFORM[@]}" \
-    "${DOCKER_MOUNTS[@]}" \
-    -w /src \
-    -e HOME=/tmp \
-    "${IMAGE}" bash
-fi
-
 PRESET="${PLATFORM}"
 if [[ "${PLATFORM}" == "macos" ]]; then
   case "${MAC_ARCH}" in
@@ -148,6 +140,19 @@ if [[ "${PLATFORM}" == "macos" ]]; then
 elif [[ -n "${MAC_ARCH}" ]]; then
   echo "${USAGE}" >&2
   exit 1
+fi
+
+if [[ "${WANT_SHELL}" -eq 1 ]]; then
+  echo "image: ${IMAGE}"
+  echo "preset: ${PRESET}"
+  echo "cwd: /src (repo mounted)"
+  echo "cmake --preset ${PRESET} && cmake --build --preset ${PRESET}"
+  exec docker run --rm -it \
+    "${DOCKER_PLATFORM[@]}" \
+    "${DOCKER_MOUNTS[@]}" \
+    -w /src \
+    -e HOME=/tmp \
+    "${IMAGE}" bash
 fi
 
 if [[ -z "${VERSION:-}" ]]; then
