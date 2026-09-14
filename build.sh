@@ -7,18 +7,21 @@
 #   bash build.sh macos arm64
 #   bash build.sh switch
 #   bash build.sh switch /path/to/core_libretro.a
+#   bash build.sh vita
+#   bash build.sh vita /path/to/core_libretro.a
 #   bash build.sh switch --core /path/to/core_libretro.a
 #   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
 #   bash build.sh linux shell
 #   bash build.sh switch sdk
+#   bash build.sh vita sdk
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
-USAGE="usage: $0 linux|windows|switch [shell|sdk] [--core core.a]
+USAGE="usage: $0 linux|windows|switch|vita [shell|sdk] [--core core.a]
        $0 macos [x86_64|arm64] [shell|sdk]
-       $0 switch /path/to/core_libretro.a"
+       $0 switch|vita /path/to/core_libretro.a"
 
 set -a
 # shellcheck disable=SC1091
@@ -33,7 +36,7 @@ if [[ "${PLATFORM}" == *-* ]]; then
 fi
 
 case "${PLATFORM}" in
-  linux|windows|macos|switch) ;;
+  linux|windows|macos|switch|vita) ;;
   *)
     echo "${USAGE}" >&2
     exit 1
@@ -171,7 +174,7 @@ CMAKE_CORE_ARGS=()
 if [[ -n "${CORE_CMAKE_PATH}" ]]; then
   CMAKE_CORE_ARGS=(-DROMBUNDLER_CORE_LIBRARY="${CORE_CMAKE_PATH}")
 else
-  # Drop a previous core from the CMake cache when building the dummy NRO.
+  # Drop a previous core from the CMake cache when building the dummy NRO/VPK.
   CMAKE_CORE_ARGS=(-DROMBUNDLER_CORE_LIBRARY=)
 fi
 

@@ -10,10 +10,13 @@ struct config;
 int platform_boot(struct config *cfg);
 void platform_deinit(void);
 void platform_fatal(const char *msg);
+void platform_debug(const char *msg);
 FILE *platform_fopen(const char *path, const char *mode);
 const char *platform_srm_path(void);
 void platform_prepare_core(const char *path);
 int platform_gl_enable_texture_2d(void);
+int platform_use_glsl_shaders(void);
+int platform_has_audio(void);
 
 void platform_poll(void);
 bool platform_should_close(void);

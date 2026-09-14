@@ -248,13 +248,10 @@ void core_load_game(const char *filename)
 
 	video_configure(&av.geometry);
 	rb_audio_init(av.timing.sample_rate);
-
 	if (g_cfg.port0) core.retro_set_controller_port_device(0, g_cfg.port0);
 	if (g_cfg.port1) core.retro_set_controller_port_device(1, g_cfg.port1);
 	if (g_cfg.port2) core.retro_set_controller_port_device(2, g_cfg.port2);
 	if (g_cfg.port3) core.retro_set_controller_port_device(3, g_cfg.port3);
-
-	return;
 }
 
 void core_run()

@@ -1,0 +1,25 @@
+{
+  "name": "ROMBundler Vita (vitasdk)",
+  "build": {
+    "dockerfile": "../../docker/Dockerfile.vita",
+    "context": "../../docker"
+  },
+  "workspaceFolder": "/src",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,consistency=cached",
+  "remoteUser": "root",
+  "containerEnv": {
+    "VITASDK": "/usr/local/vitasdk"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake"
+      ]
+    },
+    "zed": {
+      "extensions": ["dockerfile", "make"]
+    }
+  }
+}
