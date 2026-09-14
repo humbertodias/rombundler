@@ -248,6 +248,14 @@ void platform_poll(void)
 		should_close = true;
 }
 
+void platform_enter_loop(void (*frame)(void), void (*cleanup)(void))
+{
+	while (!platform_should_close())
+		frame();
+	if (cleanup)
+		cleanup();
+}
+
 bool platform_should_close(void)
 {
 	return should_close;

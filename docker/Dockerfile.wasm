@@ -1,0 +1,28 @@
+# Emscripten toolchain for WebAssembly builds.
+#   docker build -t rombundler-wasm -f docker/Dockerfile.wasm docker/
+#
+# Toolchain only: does not clone this repo. Uses the official emsdk image.
+# Kitware CMake is required (presets schema version 6 needs CMake >= 3.25).
+
+FROM emscripten/emsdk:6.0.8
+
+ENV PLATFORM=wasm \
+    EMSDK=/emsdk \
+    PATH="/emsdk:/emsdk/upstream/emscripten:/opt/cmake/bin:${PATH}"
+
+ARG CMAKE_VERSION=3.31.6
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        ninja-build \
+        zip \
+    && curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
+        | tar -xz -C /opt \
+    && mv "/opt/cmake-${CMAKE_VERSION}-linux-x86_64" /opt/cmake \
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --system --add safe.directory '*' \
+    && cmake --version
+
+WORKDIR /src
+CMD ["bash"]

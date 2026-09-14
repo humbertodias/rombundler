@@ -1,11 +1,13 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <emscripten/emscripten.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include "platform.h"
 #include "libretro.h"
-#include "mappings.h"
 #include "utils.h"
 #include "config.h"
 #include "ini.h"
@@ -13,19 +15,13 @@
 
 static GLFWwindow *window = NULL;
 static bool should_close = false;
+static void (*loop_frame)(void);
+static void (*loop_cleanup)(void);
 
 static void error_cb(int error, const char *description)
 {
 	(void)error;
 	fprintf(stderr, "Error: %s\n", description);
-}
-
-static void joystick_callback(int jid, int event)
-{
-	if (event == GLFW_CONNECTED)
-		printf("%s %s\n", glfwGetGamepadName(jid), glfwGetJoystickGUID(jid));
-	else if (event == GLFW_DISCONNECTED)
-		printf("Joypad %d disconnected\n", jid);
 }
 
 void platform_fatal(const char *msg)
@@ -54,12 +50,32 @@ FILE *platform_fopen(const char *path, const char *mode)
 
 const char *platform_srm_path(void)
 {
-	return "./save.srm";
+	return "/save.srm";
 }
 
 void platform_prepare_core(const char *path)
 {
-	(void)path;
+	size_t n;
+
+	if (!path || !path[0])
+		return;
+	n = strlen(path);
+	if ((n >= 3 && !strcasecmp(path + n - 3, ".so")) ||
+	    (n >= 4 && !strcasecmp(path + n - 4, ".dll")) ||
+	    (n >= 3 && !strcasecmp(path + n - 3, ".js")) ||
+	    (n >= 5 && !strcasecmp(path + n - 5, ".wasm")) ||
+	    (n >= 6 && !strcasecmp(path + n - 6, ".dylib")))
+		die("WASM cannot load '%s' at runtime.\n"
+		    "This build has a core linked into the module.\n"
+		    "Set core = dummy in config.ini, or rebuild with -DROMBUNDLER_CORE_LIBRARY=<core.a>.",
+		    path);
+#ifdef ROMBUNDLER_DUMMY_CORE
+	if (strcasecmp(path, "dummy") != 0)
+		die("This WASM build is the dummy core (color bars). config.ini core=%s does not load a core.\n"
+		    "Rebuild with -DROMBUNDLER_CORE_LIBRARY=/path/to/core_libretro.a\n"
+		    "and set core = dummy (or any name without .so/.js).",
+		    path);
+#endif
 }
 
 int platform_gl_enable_texture_2d(void)
@@ -79,12 +95,12 @@ int platform_has_audio(void)
 
 int platform_gl_check_proc_pointers(void)
 {
-	return 1;
+	return 0;
 }
 
 int platform_gles(void)
 {
-	return 0;
+	return 1;
 }
 
 int platform_use_fbo(void)
@@ -104,18 +120,16 @@ void platform_draw_immediate_quad(const float quad[16])
 
 int platform_boot(struct config *cfg)
 {
-	if (ini_parse("./config.ini", cfg_handler, cfg) < 0)
+	if (ini_parse("/config.ini", cfg_handler, cfg) < 0 &&
+	    ini_parse("./config.ini", cfg_handler, cfg) < 0)
 		return 0;
+	ini_parse("/options.ini", opt_handler, NULL);
 	ini_parse("./options.ini", opt_handler, NULL);
 
 	glfwSetErrorCallback(error_cb);
 	if (!glfwInit())
 		die("Failed to initialize GLFW");
-	if (!glfwUpdateGamepadMappings(mappings))
-		die("Failed to load mappings");
-	else
-		printf("Updated mappings\n");
-	glfwSetJoystickCallback(joystick_callback);
+	/* Emscripten's GLFW port has no gamepad mapping API; keyboard still works. */
 	return 1;
 }
 
@@ -131,12 +145,26 @@ void platform_poll(void)
 		should_close = true;
 }
 
+static void wasm_main_loop(void)
+{
+	if (platform_should_close()) {
+		if (loop_cleanup) {
+			loop_cleanup();
+			loop_cleanup = NULL;
+		}
+		emscripten_cancel_main_loop();
+		return;
+	}
+	if (loop_frame)
+		loop_frame();
+}
+
 void platform_enter_loop(void (*frame)(void), void (*cleanup)(void))
 {
-	while (!platform_should_close())
-		frame();
-	if (cleanup)
-		cleanup();
+	loop_frame = frame;
+	loop_cleanup = cleanup;
+	/* fps=0 follows display refresh; simulate_infinite_loop=1 never returns. */
+	emscripten_set_main_loop(wasm_main_loop, 0, 1);
 }
 
 bool platform_should_close(void)
@@ -180,40 +208,16 @@ void *platform_get_proc_address(const char *name)
 int platform_create_window(int width, int height, const char *title,
 	int fullscreen, int hide_cursor, unsigned hw_context_type, int major, int minor)
 {
-	if (hw_context_type == RETRO_HW_CONTEXT_OPENGL_CORE || major >= 3) {
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
-	} else {
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	}
+	(void)hw_context_type;
+	(void)major;
+	(void)minor;
+	(void)fullscreen;
 
-	switch (hw_context_type) {
-	case RETRO_HW_CONTEXT_OPENGL_CORE:
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-		break;
-	case RETRO_HW_CONTEXT_OPENGLES2:
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-		break;
-	case RETRO_HW_CONTEXT_OPENGL:
-		if (major >= 3)
-			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-		break;
-	default:
-		die("Unsupported hw context %i. (only OPENGL, OPENGL_CORE and OPENGLES2 supported)", hw_context_type);
-	}
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-	GLFWmonitor *monitor = NULL;
-	if (fullscreen) {
-		int count;
-		monitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode *modes = glfwGetVideoModes(monitor, &count);
-		const GLFWvidmode mode = modes[count - 1];
-		width = mode.width;
-		height = mode.height;
-	}
-
-	window = glfwCreateWindow(width, height, title, monitor, NULL);
+	window = glfwCreateWindow(width, height, title, NULL, NULL);
 	if (!window)
 		die("Failed to create window.");
 
@@ -260,21 +264,20 @@ void platform_cursor_pos(double *x, double *y)
 
 int platform_gamepad_present(int port)
 {
-	return glfwJoystickIsGamepad(port);
+	(void)port;
+	return 0;
 }
 
 int platform_gamepad_button(int port, int button)
 {
-	GLFWgamepadstate pad;
-	if (!glfwGetGamepadState(port, &pad))
-		return 0;
-	return pad.buttons[button];
+	(void)port;
+	(void)button;
+	return 0;
 }
 
 float platform_gamepad_axis(int port, int axis)
 {
-	GLFWgamepadstate pad;
-	if (!glfwGetGamepadState(port, &pad))
-		return 0.f;
-	return pad.axes[axis];
+	(void)port;
+	(void)axis;
+	return 0.f;
 }

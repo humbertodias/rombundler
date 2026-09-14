@@ -2,7 +2,7 @@
 
 The Vita port is a single homebrew VPK. There is no `dlopen`: RetroArch cores cannot be selected from `config.ini`. The default build links a dummy core (moving color bars). A real core must be a **static** `*_libretro.a` (vitasdk) linked at compile time.
 
-Desktop (Linux, Windows, macOS): [desktop.md](desktop.md). Nintendo Switch: [switch.md](switch.md).
+Desktop (Linux, Windows, macOS): [desktop.md](desktop.md). Nintendo Switch: [switch.md](switch.md). WebAssembly: [wasm.md](wasm.md).
 
 ## Hardware (required)
 

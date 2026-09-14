@@ -1,0 +1,25 @@
+{
+  "name": "ROMBundler WASM (Emscripten)",
+  "build": {
+    "dockerfile": "../../docker/Dockerfile.wasm",
+    "context": "../../docker"
+  },
+  "workspaceFolder": "/src",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,consistency=cached",
+  "remoteUser": "root",
+  "containerEnv": {
+    "EMSDK": "/emsdk"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake"
+      ]
+    },
+    "zed": {
+      "extensions": ["dockerfile", "make"]
+    }
+  }
+}
