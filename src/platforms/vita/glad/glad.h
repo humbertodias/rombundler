@@ -4,6 +4,10 @@
 /* video.c includes <glad/glad.h>. vitaGL exports GL symbols directly. */
 #include <vitaGL.h>
 
+#ifndef GL_RGB565
+#define GL_RGB565 0x8D62
+#endif
+
 typedef void *(*GLADloadproc)(const char *name);
 
 static inline int gladLoadGLLoader(GLADloadproc load)
