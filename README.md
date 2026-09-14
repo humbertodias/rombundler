@@ -52,6 +52,8 @@ cmake --preset linux    # or macos on Darwin
 cmake --build --preset linux
 ```
 
+`make` / `make clean` wrap those presets on the host (`linux` or `macos`). Sample configs: `src/platforms/desktop/config.ini` (copied into desktop zips) and `src/platforms/switch/romfs/config.ini` (Switch romfs + zip).
+
 # Usage
 
 You don't need to compile `rombundler` if you just want to use it, you can get one of the binary releases [here](https://github.com/kivutar/rombundler/releases)
