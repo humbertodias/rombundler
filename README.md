@@ -32,7 +32,18 @@ bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
 
 Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`). Desktop ports fetch and statically link GLFW and OpenAL-Soft. Switch uses libnx + Mesa EGL (no GLFW) and `audout` for audio. Zips land in `dist/`. Nintendo Switch: [doc/switch.md](doc/switch.md).
 
-Open a toolchain shell with `bash build.sh linux shell` (or `windows` / `macos` / `switch`).
+Open an interactive toolchain shell (repo at `/src`, same image as the build):
+
+```shell
+bash build.sh linux shell
+bash build.sh windows shell
+bash build.sh macos shell
+bash build.sh switch shell
+```
+
+`sdk` is an alias for `shell` (`bash build.sh switch sdk`). Then `cmake --preset switch` (or `linux` / `windows` / `macos-x86_64`).
+
+Zed, VS Code, and Cursor can attach to the same images via [Dev Containers](https://containers.dev/) (`.devcontainer/`). The default is the Linux toolchain; pick **Windows (MinGW)**, **macOS (osxcross)**, or **Switch (devkitA64)** in the config picker. The repo is mounted at `/src`, same as `build.sh`.
 
 With a local compiler, CMake 3.24+, and Ninja:
 

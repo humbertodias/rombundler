@@ -9,7 +9,10 @@ Needs [devkitA64 / libnx](https://devkitpro.org/) plus `switch-mesa`. Docker (li
 ```shell
 bash build.sh switch
 bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh switch shell
 ```
+
+`sdk` is an alias for `shell`. The repo is mounted at `/src` in `rombundler-switch`. Cursor / VS Code: Dev Container **Switch (devkitA64)** (`.devcontainer/switch/`).
 
 Local toolchain:
 
