@@ -110,7 +110,7 @@ size_t audio_write(const void *buf_, unsigned size) {
 	return written;
 }
 
-void audio_deinit() {
+void rb_audio_deinit() {
 	if (!al)
 		return;
 
@@ -131,7 +131,7 @@ void audio_deinit() {
 	free(al);
 }
 
-void audio_init(int rate) {
+void rb_audio_init(int rate) {
 	al = (al_t*)calloc(1, sizeof(al_t));
 	if (!al)
 		return;
@@ -159,11 +159,11 @@ void audio_init(int rate) {
 	al->res_ptr = NUMBUFFERS;
 }
 
-void audio_sample(int16_t left, int16_t right) {
+void rb_audio_sample(int16_t left, int16_t right) {
 	int16_t buf[2] = {left, right};
 	audio_write(buf, 4);
 }
 
-size_t audio_sample_batch(const int16_t *data, size_t frames) {
+size_t rb_audio_sample_batch(const int16_t *data, size_t frames) {
 	return audio_write(data, frames*4);
 }

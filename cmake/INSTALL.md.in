@@ -1,0 +1,13 @@
+# Installing ROMBundler on @ROMBUNDLER_INSTALL_PLATFORM@
+
+## Installation
+
+@ROMBUNDLER_INSTALL_STEPS@
+
+## Game data
+
+@ROMBUNDLER_INSTALL_DATA@
+
+## Build layout
+
+@ROMBUNDLER_INSTALL_LAYOUT@

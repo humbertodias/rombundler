@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "libretro.h"
 #include "core.h"
+#include "platform.h"
 
 void srm_save()
 {
@@ -9,10 +10,10 @@ void srm_save()
 	if (!size || !data)
 		return;
 
-	FILE *f = fopen("./save.srm", "w");
+	FILE *f = platform_fopen(platform_srm_path(), "w");
 	if (!f)
 		return;
-	
+
 	fwrite(data, 1, size, f);
 	fclose(f);
 }
@@ -24,10 +25,10 @@ void srm_load()
 	if (!size || !data)
 		return;
 
-	FILE *f = fopen("./save.srm", "r+");
+	FILE *f = platform_fopen(platform_srm_path(), "r+");
 	if (!f)
 		return;
-	
+
 	fread(data, 1, size, f);
 	fclose(f);
 }

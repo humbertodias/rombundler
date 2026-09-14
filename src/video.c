@@ -4,14 +4,13 @@
 #include <string.h>
 #include <math.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
 #include "libretro.h"
 #include "config.h"
 #include "utils.h"
 #include "shaders.h"
+#include "platform.h"
 
 #ifdef __APPLE__
 #define glGenVertexArrays glGenVertexArraysAPPLE
@@ -34,7 +33,6 @@
 #define GL_DEPTH24_STENCIL8 GL_DEPTH24_STENCIL8_EXT
 #endif
 
-GLFWwindow *window = NULL;
 extern config g_cfg;
 
 static struct {
@@ -137,7 +135,7 @@ static void rotate_uv(float va[16], unsigned rot) {
 static void core_ratio_viewport()
 {
 	int fbw = 0, fbh = 0;
-	glfwGetFramebufferSize(window, &fbw, &fbh);
+	platform_get_framebuffer_size(&fbw, &fbh);
 
 	float ffbw = (float)fbw;
 	float ffbh = (float)fbh;
@@ -265,72 +263,26 @@ void video_set_rotation(unsigned rot)
 
 void create_window(int width, int height)
 {
-	if (video.hw.context_type == RETRO_HW_CONTEXT_OPENGL_CORE || video.hw.version_major >= 3) {
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, video.hw.version_major);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, video.hw.version_minor);
-	}
-	else
-	{
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	}
+	platform_create_window(width, height, g_cfg.title, g_cfg.fullscreen,
+		g_cfg.hide_cursor, video.hw.context_type, video.hw.version_major, video.hw.version_minor);
 
-	switch (video.hw.context_type) {
-		case RETRO_HW_CONTEXT_OPENGL_CORE:
-			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-			break;
-		case RETRO_HW_CONTEXT_OPENGLES2:
-			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-			break;
-		case RETRO_HW_CONTEXT_OPENGL:
-			if (video.hw.version_major >= 3)
-				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-			break;
-		default:
-			die("Unsupported hw context %i. (only OPENGL, OPENGL_CORE and OPENGLES2 supported)", video.hw.context_type);
-	}
-
-	GLFWmonitor* monitor = NULL;
-	if (g_cfg.fullscreen)
-	{
-		int count;
-		monitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode *modes = glfwGetVideoModes(monitor, &count);
-		const GLFWvidmode mode = modes[count-1];
-		width = mode.width;
-		height = mode.height;
-	}
-
-	window = glfwCreateWindow(width, height, g_cfg.title, monitor, NULL);
-
-	if (!window)
-		die("Failed to create window.");
-
-	if (g_cfg.hide_cursor)
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-
-	glfwMakeContextCurrent(window);
-
-	// if (video.hw.context_type == RETRO_HW_CONTEXT_OPENGLES2) {
-	// 	if (!gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress))
-	// 		die("Failed to initialize glad.");
-	// } else {
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-			die("Failed to initialize glad.");
-	// }
+	if (!gladLoadGLLoader((GLADloadproc)platform_get_proc_address) ||
+	    !glCreateShader || !glGenVertexArrays || !glTexImage2D)
+		die("Failed to initialize OpenGL functions");
 
 	init_shaders();
 
-	glfwSwapInterval(1);
+	platform_set_swap_interval(1);
 
-	glEnable(GL_TEXTURE_2D);
+	if (platform_gl_enable_texture_2d())
+		glEnable(GL_TEXTURE_2D);
 }
 
 void video_should_close(int v)
 {
-	if (!window)
+	if (!platform_window_ready())
 		return;
-	glfwSetWindowShouldClose(window, v);
+	platform_set_should_close(v != 0);
 }
 
 static void init_framebuffer(int width, int height)
@@ -388,7 +340,7 @@ void video_configure(const struct retro_game_geometry *geom)
 	video.hw.context_reset   = noop;
 	video.hw.context_destroy = noop;
 
-	if (!window)
+	if (!platform_window_ready())
 		create_window(g_cfg.window_width, g_cfg.window_height);
 
 	video.tex_id = 0;
@@ -514,7 +466,7 @@ void video_render()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	int fbw = 0, fbh = 0;
-	glfwGetFramebufferSize(window, &fbw, &fbh);
+	platform_get_framebuffer_size(&fbw, &fbh);
 	glViewport(0, 0, fbw, fbh);
 
 	core_ratio_viewport();
@@ -548,5 +500,5 @@ void video_deinit()
 	if (shader.program)
 		glDeleteProgram(shader.program);
 
-	glfwDestroyWindow(window);
+	platform_destroy_window();
 }

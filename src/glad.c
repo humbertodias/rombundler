@@ -690,6 +690,11 @@ void close_gl(void) {
     }
 }
 #else
+#if defined(__SWITCH__)
+static void *libGL;
+static int open_gl(void) { return 0; }
+static void close_gl(void) { libGL = NULL; }
+#else
 #include <dlfcn.h>
 static void* libGL;
 
@@ -736,10 +741,15 @@ void close_gl(void) {
         libGL = NULL;
     }
 }
-#endif
+#endif /* !__SWITCH__ */
+#endif /* !_WIN32 */
 
 static
 void* get_proc(const char *namez) {
+#if defined(__SWITCH__)
+    (void)namez;
+    return NULL;
+#else
     void* result = NULL;
     if(libGL == NULL) return NULL;
 
@@ -757,6 +767,7 @@ void* get_proc(const char *namez) {
     }
 
     return result;
+#endif
 }
 
 int gladLoadGL(void) {
