@@ -18,12 +18,24 @@ Dependencies are:
  * OpenAL
  * OpenGL 2.1
 
-See our Github Action config files for detailed instructions on how to setup dependencies per OS.
-
-To compile:
+The three ports (Linux, Windows, macOS) are built in **separate** Docker images so toolchains stay decoupled. Only [Docker](https://www.docker.com/get-started/) is required:
 
 ```shell
-make
+bash scripts/build.sh linux
+bash scripts/build.sh windows
+bash scripts/build.sh macos
+bash scripts/build.sh macos arm64
+```
+
+Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`). GLFW and OpenAL-Soft are fetched and linked statically. Zips land in `dist/`.
+
+Open a toolchain shell with `bash scripts/build.sh linux shell` (or `windows` / `macos`).
+
+With a local compiler, CMake 3.24+, and Ninja:
+
+```shell
+cmake --preset linux    # or macos on Darwin
+cmake --build --preset linux
 ```
 
 # Usage
