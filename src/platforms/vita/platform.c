@@ -149,6 +149,42 @@ int platform_has_audio(void)
 	return 1;
 }
 
+int platform_gl_check_proc_pointers(void)
+{
+	return 0;
+}
+
+int platform_gles(void)
+{
+	return 1;
+}
+
+int platform_use_fbo(void)
+{
+	return 0;
+}
+
+int platform_unpack_row_length(void)
+{
+	return 0;
+}
+
+void platform_draw_immediate_quad(const float quad[16])
+{
+	glEnable(GL_TEXTURE_2D);
+	glColor4f(1.f, 1.f, 1.f, 1.f);
+	glBegin(GL_TRIANGLE_STRIP);
+	glTexCoord2f(quad[2], quad[3]);
+	glVertex2f(quad[0], quad[1]);
+	glTexCoord2f(quad[6], quad[7]);
+	glVertex2f(quad[4], quad[5]);
+	glTexCoord2f(quad[10], quad[11]);
+	glVertex2f(quad[8], quad[9]);
+	glTexCoord2f(quad[14], quad[15]);
+	glVertex2f(quad[12], quad[13]);
+	glEnd();
+}
+
 void platform_deinit(void)
 {
 	window_ready = false;

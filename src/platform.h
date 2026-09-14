@@ -17,6 +17,11 @@ void platform_prepare_core(const char *path);
 int platform_gl_enable_texture_2d(void);
 int platform_use_glsl_shaders(void);
 int platform_has_audio(void);
+int platform_gl_check_proc_pointers(void);
+int platform_gles(void);
+int platform_use_fbo(void);
+int platform_unpack_row_length(void);
+void platform_draw_immediate_quad(const float quad[16]);
 
 void platform_poll(void);
 bool platform_should_close(void);

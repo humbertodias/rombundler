@@ -42,11 +42,20 @@ if (DEFINED DEVKITPRO AND EXISTS "${DEVKITPRO}/libnx/default_icon.jpg")
   list (APPEND NX_ICON_ARGS "--icon=${DEVKITPRO}/libnx/default_icon.jpg")
 endif ()
 
+# NACP display_version is 15 chars. Do not quote --nacp=path under VERBATIM:
+# Ninja would pass literal quotes and elf2nro fails with "Failed to open input nacp!".
+string (LENGTH "${ROMBUNDLER_VERSION}" _nx_ver_len)
+if (_nx_ver_len GREATER 15)
+  set (_nx_app_ver "01.00")
+else ()
+  set (_nx_app_ver "${ROMBUNDLER_VERSION}")
+endif ()
+
 add_custom_command (TARGET rombundler POST_BUILD
-  COMMAND "${NACPTOOL}" --create "ROMBundler" "ROMBundler" "${ROMBUNDLER_VERSION}" "${NX_NACP}"
+  COMMAND "${NACPTOOL}" --create ROMBundler ROMBundler "${_nx_app_ver}" "${NX_NACP}"
   COMMAND "${ELF2NRO}" "$<TARGET_FILE:rombundler>" "${NX_NRO}"
-          --nacp="${NX_NACP}"
-          --romfsdir="${NX_ROMFS}"
+          "--nacp=${NX_NACP}"
+          "--romfsdir=${NX_ROMFS}"
           ${NX_ICON_ARGS}
   COMMENT "Building rombundler.nro"
   VERBATIM

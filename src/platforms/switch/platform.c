@@ -202,6 +202,31 @@ int platform_has_audio(void)
 	return 1;
 }
 
+int platform_gl_check_proc_pointers(void)
+{
+	return 1;
+}
+
+int platform_gles(void)
+{
+	return 0;
+}
+
+int platform_use_fbo(void)
+{
+	return 1;
+}
+
+int platform_unpack_row_length(void)
+{
+	return 1;
+}
+
+void platform_draw_immediate_quad(const float quad[16])
+{
+	(void)quad;
+}
+
 void platform_deinit(void)
 {
 	deinit_egl();
