@@ -66,6 +66,12 @@ jobs:
             extra: ""
             timeout: 45
             docker_platforms: linux/amd64
+          - platform: wasm
+            artifact: wasm-wasm32
+            runner: ubuntu-24.04
+            extra: ""
+            timeout: 45
+            docker_platforms: linux/amd64
 
     steps:
       - uses: actions/checkout@v4

@@ -17,6 +17,29 @@
 
 config g_cfg;
 
+static unsigned g_frame;
+
+static void app_step(void)
+{
+	platform_poll();
+	input_poll();
+	core_run();
+	video_render();
+	platform_swap_buffers();
+	g_frame++;
+	if (g_frame % 600 == 0)
+		srm_save();
+}
+
+static void app_cleanup(void)
+{
+	srm_save();
+	core_unload();
+	rb_audio_deinit();
+	video_deinit();
+	platform_deinit();
+}
+
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
@@ -31,24 +54,6 @@ int main(int argc, char *argv[]) {
 	srm_load();
 
 	platform_set_swap_interval(g_cfg.swap_interval);
-
-	unsigned frame = 0;
-	while (!platform_should_close()) {
-		platform_poll();
-		input_poll();
-		core_run();
-		video_render();
-		platform_swap_buffers();
-		frame++;
-		if (frame % 600 == 0)
-			srm_save();
-	}
-
-	srm_save();
-	core_unload();
-	rb_audio_deinit();
-	video_deinit();
-
-	platform_deinit();
+	platform_enter_loop(app_step, app_cleanup);
 	return 0;
 }

@@ -24,6 +24,9 @@ int platform_unpack_row_length(void);
 void platform_draw_immediate_quad(const float quad[16]);
 
 void platform_poll(void);
+/* Runs frame until should_close. Calls cleanup once before returning (or
+ * before cancelling the browser main loop on WebAssembly). */
+void platform_enter_loop(void (*frame)(void), void (*cleanup)(void));
 bool platform_should_close(void);
 void platform_set_should_close(bool close);
 void platform_swap_buffers(void);
