@@ -23,12 +23,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 \
         zip \
     && rm -rf /var/lib/apt/lists/* \
-    && (command -v dkp-pacman >/dev/null && dkp-pacman -Syu --noconfirm || pacman -Syu --noconfirm) \
-    && (command -v dkp-pacman >/dev/null && dkp-pacman -S --noconfirm --needed switch-mesa switch-libdrm_nouveau \
-        || pacman -S --noconfirm --needed switch-mesa switch-libdrm_nouveau) \
-    && (command -v dkp-pacman >/dev/null && dkp-pacman -Scc --noconfirm || pacman -Scc --noconfirm) \
-    && git config --system --add safe.directory '*' \
-    && chmod -R a+rX ${DEVKITPRO}
+    && git config --system --add safe.directory '*'
+
+# switch-mesa is not always in the base image. pkg.devkitpro.org often returns 403;
+# dkp-pacman is the real client (there is no `pacman` on PATH). Retry instead of
+# falling through. Skip the fetch when EGL is already installed.
+RUN set -eux; \
+    if [ -f "${DEVKITPRO}/portlibs/switch/lib/libEGL.a" ]; then \
+      echo "switch-mesa already present"; \
+    else \
+      PACMAN="$(command -v dkp-pacman || true)"; \
+      if [ -z "${PACMAN}" ] && [ -x "${DEVKITPRO}/pacman/bin/pacman" ]; then \
+        PACMAN="${DEVKITPRO}/pacman/bin/pacman"; \
+      fi; \
+      if [ -z "${PACMAN}" ]; then \
+        echo "dkp-pacman not found and switch-mesa is missing" >&2; \
+        exit 1; \
+      fi; \
+      i=0; \
+      until "${PACMAN}" -Sy --noconfirm \
+        && "${PACMAN}" -S --noconfirm --needed switch-mesa switch-libdrm_nouveau; do \
+        i=$((i + 1)); \
+        if [ "${i}" -ge 6 ]; then \
+          echo "dkp-pacman failed after retries (pkg.devkitpro.org 403?)" >&2; \
+          exit 1; \
+        fi; \
+        sleep $((i * 12)); \
+      done; \
+      "${PACMAN}" -Scc --noconfirm || true; \
+    fi; \
+    chmod -R a+rX "${DEVKITPRO}"
 
 WORKDIR /src
 CMD ["bash"]
