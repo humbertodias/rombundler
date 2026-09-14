@@ -4,11 +4,9 @@ project (rombundler C CXX)
 
 set (CMAKE_C_STANDARD 11)
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 set (ROMBUNDLER_VERSION "devel" CACHE STRING "Bundle version string")
-set (ROMBUNDLER_GLFW_VERSION "3.4" CACHE STRING "GLFW source tag")
-set (ROMBUNDLER_OPENAL_VERSION "1.24.2" CACHE STRING "OpenAL-Soft source tag")
-set (ROMBUNDLER_CORE_LIBRARY "" CACHE FILEPATH "Optional static libretro core (.a) for Switch")
+
+include ("${CMAKE_SOURCE_DIR}/cmake/Package.cmake")
 
 if (NINTENDO_SWITCH)
   set (ROMBUNDLER_PORT_OS "Switch")
@@ -34,10 +32,6 @@ else ()
   set (ROMBUNDLER_PLATFORM_FILE "${CMAKE_SOURCE_DIR}/cmake/platforms/Desktop.cmake")
 endif ()
 
-if (NOT NINTENDO_SWITCH)
-  include ("${CMAKE_SOURCE_DIR}/cmake/FetchDeps.cmake")
-endif ()
-
 set (ROMBUNDLER_SOURCES
   src/main.c
   src/config.c
@@ -48,17 +42,6 @@ set (ROMBUNDLER_SOURCES
   src/utils.c
   src/srm.c
 )
-
-include ("${ROMBUNDLER_PLATFORM_FILE}")
-
-add_executable (rombundler ${ROMBUNDLER_SOURCES} ${ROMBUNDLER_PLATFORM_SOURCES})
-
-target_include_directories (rombundler PRIVATE
-  ${ROMBUNDLER_PLATFORM_INCLUDES}
-  "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/include"
-)
-target_compile_options (rombundler PRIVATE -Wall -O3)
 
 set (BUNDLE_NAME "ROMBundler-${ROMBUNDLER_PORT_OS}-${ROMBUNDLER_VERSION}-${ROMBUNDLER_ARCH}")
 set (DIST_DIR "${CMAKE_SOURCE_DIR}/dist")

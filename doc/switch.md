@@ -2,6 +2,8 @@
 
 The Switch port is a single homebrew NRO. There is no `dlopen`: RetroArch `*_libnx.nro` cores cannot be selected from `config.ini`. The default build links a dummy core (color bars). A real core must be a **static** `*_libretro_libnx.a` linked at compile time.
 
+Desktop (Linux, Windows, macOS): [desktop.md](desktop.md).
+
 ## Build
 
 Needs [devkitA64 / libnx](https://devkitpro.org/) plus `switch-mesa`. Docker (linux/amd64 image `rombundler-switch`):

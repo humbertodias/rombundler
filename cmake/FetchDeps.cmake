@@ -1,4 +1,8 @@
 # Static GLFW + OpenAL-Soft via FetchContent. Desktop ports only.
+# Tag versions come from versions.env (override with -DROMBUNDLER_*_VERSION).
+
+include ("${CMAKE_SOURCE_DIR}/cmake/LoadVersions.cmake")
+rombundler_apply_dep_versions ()
 
 include (FetchContent)
 

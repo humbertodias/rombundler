@@ -1,0 +1,23 @@
+# Map versions.env into CMake cache. Command-line -D still wins.
+
+macro (rombundler_load_env_file _file)
+  file (STRINGS "${_file}" _rb_ver_lines)
+  foreach (_rb_ver_line IN LISTS _rb_ver_lines)
+    if (_rb_ver_line MATCHES "^[ \t]*#" OR _rb_ver_line STREQUAL "")
+      continue ()
+    endif ()
+    if (_rb_ver_line MATCHES "^([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
+      set (${CMAKE_MATCH_1} "${CMAKE_MATCH_2}")
+    endif ()
+  endforeach ()
+endmacro ()
+
+macro (rombundler_apply_dep_versions)
+  rombundler_load_env_file ("${CMAKE_SOURCE_DIR}/versions.env")
+  if (NOT DEFINED CACHE{ROMBUNDLER_GLFW_VERSION})
+    set (ROMBUNDLER_GLFW_VERSION "${GLFW_VERSION}" CACHE STRING "GLFW source tag")
+  endif ()
+  if (NOT DEFINED CACHE{ROMBUNDLER_OPENAL_VERSION})
+    set (ROMBUNDLER_OPENAL_VERSION "${OPENAL_VERSION}" CACHE STRING "OpenAL-Soft source tag")
+  endif ()
+endmacro ()

@@ -1,25 +1,25 @@
 # Nintendo Switch (libnx). Toolchain: cmake/toolchains/devkita64-libnx.cmake.
 # Mesa libglad (OpenGL 4.3 core), not the desktop glad loader.
 
-if (NOT TARGET rombundler)
-  set (ROMBUNDLER_PLATFORM_SOURCES
-    "${CMAKE_SOURCE_DIR}/src/platforms/switch/platform.c"
-    "${CMAKE_SOURCE_DIR}/src/platforms/switch/audio.c"
-    "${CMAKE_SOURCE_DIR}/src/platforms/switch/input.c"
-  )
-  set (ROMBUNDLER_PLATFORM_LIBS glad)
-  if (ROMBUNDLER_CORE_LIBRARY)
-    list (APPEND ROMBUNDLER_PLATFORM_LIBS "${ROMBUNDLER_CORE_LIBRARY}")
-    list (APPEND ROMBUNDLER_PLATFORM_SOURCES "${CMAKE_SOURCE_DIR}/src/platforms/switch/libretro_compat.c")
-  else ()
-    list (APPEND ROMBUNDLER_PLATFORM_SOURCES "${CMAKE_SOURCE_DIR}/src/platforms/switch/dummy_core.c")
-    set (ROMBUNDLER_PLATFORM_DEFINES ROMBUNDLER_DUMMY_CORE)
-  endif ()
-  set (ROMBUNDLER_PLATFORM_INCLUDES
-    "${CMAKE_SOURCE_DIR}/src/platforms/switch"
-  )
-  return ()
+set (ROMBUNDLER_CORE_LIBRARY "" CACHE FILEPATH "Optional static libretro core (.a) for Switch")
+
+set (ROMBUNDLER_PLATFORM_SOURCES
+  "${CMAKE_SOURCE_DIR}/src/platforms/switch/platform.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/switch/audio.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/switch/input.c"
+)
+set (ROMBUNDLER_PLATFORM_LIBS glad)
+if (ROMBUNDLER_CORE_LIBRARY)
+  list (APPEND ROMBUNDLER_PLATFORM_LIBS "${ROMBUNDLER_CORE_LIBRARY}")
+  list (APPEND ROMBUNDLER_PLATFORM_SOURCES "${CMAKE_SOURCE_DIR}/src/platforms/switch/libretro_compat.c")
+else ()
+  list (APPEND ROMBUNDLER_PLATFORM_SOURCES "${CMAKE_SOURCE_DIR}/src/platforms/switch/dummy_core.c")
+  set (ROMBUNDLER_PLATFORM_DEFINES ROMBUNDLER_DUMMY_CORE)
 endif ()
+set (ROMBUNDLER_PLATFORM_INCLUDES
+  "${CMAKE_SOURCE_DIR}/src/platforms/switch"
+)
+rombundler_add_frontend ()
 
 set_target_properties (rombundler PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries (rombundler PRIVATE ${ROMBUNDLER_PLATFORM_LIBS} EGL glapi drm_nouveau nx stdc++ m)
@@ -31,12 +31,6 @@ set (ROMBUNDLER_INSTALL_PLATFORM "Nintendo Switch")
 set (ROMBUNDLER_INSTALL_STEPS [=[Copy `rombundler.nro` to `sdmc:/switch/` (Atmosphere / hbmenu) or send it with `nxlink`. Plus+Minus returns to the homebrew menu.]=])
 set (ROMBUNDLER_INSTALL_DATA [=[See `switch.md` in this zip. Copy `config.ini` to `sdmc:/switch/rombundler/config.ini`. Point `rom=` at a file on the SD card. `core=` does not load a RetroArch `*_libnx.nro`. SRAM is `sdmc:/switch/rombundler/save.srm`. Errors: `sdmc:/switch/rombundler/error.log`.]=])
 set (ROMBUNDLER_INSTALL_LAYOUT [=[Static homebrew NRO: Mesa EGL/OpenGL and libnx `audout`. No GLFW/OpenAL. No runtime `dlopen`.]=])
-
-configure_file (
-  "${CMAKE_SOURCE_DIR}/cmake/INSTALL.md.in"
-  "${CMAKE_BINARY_DIR}/INSTALL.md"
-  @ONLY
-)
 
 find_program (NACPTOOL nacptool REQUIRED)
 find_program (ELF2NRO elf2nro REQUIRED)
@@ -54,18 +48,14 @@ add_custom_command (TARGET rombundler POST_BUILD
           --nacp="${NX_NACP}"
           --romfsdir="${NX_ROMFS}"
           ${NX_ICON_ARGS}
-  COMMAND "${CMAKE_COMMAND}" -E rm -rf "${STAGE_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${STAGE_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${NX_NRO}" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${NX_ROMFS}/config.ini" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_BINARY_DIR}/INSTALL.md" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/README.md" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/doc/switch.md" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/COPYING" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}"
-          -D "STAGE_DIR=${STAGE_DIR}"
-          -D "ZIP=${BUNDLE_ZIP}"
-          -P "${CMAKE_SOURCE_DIR}/cmake/package_zip.cmake"
+  COMMENT "Building rombundler.nro"
+  VERBATIM
+)
+
+rombundler_package_dist (
   COMMENT "Packaging dist/${BUNDLE_NAME}.zip (NRO)"
+  FILES
+    "${NX_NRO}"
+    "${NX_ROMFS}/config.ini"
+    "${CMAKE_SOURCE_DIR}/doc/switch.md"
 )

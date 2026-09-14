@@ -1,17 +1,17 @@
 # GLFW + OpenAL ports (Linux, Windows, macOS).
 
-if (NOT TARGET rombundler)
-  set (ROMBUNDLER_PLATFORM_SOURCES
-    "${CMAKE_SOURCE_DIR}/src/platforms/desktop/glad.c"
-    "${CMAKE_SOURCE_DIR}/src/platforms/desktop/platform_glfw.c"
-    "${CMAKE_SOURCE_DIR}/src/platforms/desktop/audio.c"
-    "${CMAKE_SOURCE_DIR}/src/platforms/desktop/input.c"
-  )
-  set (ROMBUNDLER_PLATFORM_INCLUDES
-    "${CMAKE_SOURCE_DIR}/src/platforms/desktop"
-  )
-  return ()
-endif ()
+include ("${CMAKE_SOURCE_DIR}/cmake/FetchDeps.cmake")
+
+set (ROMBUNDLER_PLATFORM_SOURCES
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/glad.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/platform_glfw.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/audio.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/input.c"
+)
+set (ROMBUNDLER_PLATFORM_INCLUDES
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop"
+)
+rombundler_add_frontend ()
 
 set (_openal_target OpenAL)
 if (TARGET OpenAL::OpenAL)
@@ -28,7 +28,7 @@ if (WIN32)
   )
   set (ROMBUNDLER_INSTALL_PLATFORM "Windows")
   set (ROMBUNDLER_INSTALL_STEPS [=[Unzip the archive and run `rombundler.exe` from the same folder as `config.ini`.]=])
-  set (ROMBUNDLER_INSTALL_DATA [=[Edit `config.ini` so `core` is a libretro `.dll` and `rom` is your ROM. Place both files next to the executable. Optional `options.ini` sets core variables. SRAM is `save.srm` in this folder.]=])
+  set (ROMBUNDLER_INSTALL_DATA [=[See `desktop.md` in this zip. Edit `config.ini` so `core` is a libretro `.dll` and `rom` is your ROM. Place both files next to the executable. SRAM is `save.srm` in this folder.]=])
   set (ROMBUNDLER_INSTALL_LAYOUT [=[This is a static Windows build. GLFW and OpenAL-Soft are linked into the executable.]=])
 elseif (APPLE)
   target_link_libraries (rombundler PRIVATE glfw ${_openal_target})
@@ -52,14 +52,14 @@ elseif (APPLE)
   endif ()
   set (ROMBUNDLER_INSTALL_PLATFORM "macOS")
   set (ROMBUNDLER_INSTALL_STEPS [=[Unzip the archive and run `./rombundler` from the same folder as `config.ini`. If Gatekeeper quarantines the binary: `xattr -cr .`]=])
-  set (ROMBUNDLER_INSTALL_DATA [=[Edit `config.ini` so `core` is a libretro `.dylib` and `rom` is your ROM. Place both files next to the executable. Optional `options.ini` sets core variables. SRAM is `save.srm` in this folder.]=])
+  set (ROMBUNDLER_INSTALL_DATA [=[See `desktop.md` in this zip. Edit `config.ini` so `core` is a libretro `.dylib` and `rom` is your ROM. Place both files next to the executable. SRAM is `save.srm` in this folder.]=])
   set (ROMBUNDLER_INSTALL_LAYOUT [=[This is a static macOS build. GLFW and OpenAL-Soft are linked into the executable.]=])
 else ()
   target_link_libraries (rombundler PRIVATE glfw ${_openal_target})
   target_link_libraries (rombundler PRIVATE m dl pthread stdc++)
   set (ROMBUNDLER_INSTALL_PLATFORM "Linux")
   set (ROMBUNDLER_INSTALL_STEPS [=[Unzip the archive and run `./rombundler` from the same folder as `config.ini`.]=])
-  set (ROMBUNDLER_INSTALL_DATA [=[Edit `config.ini` so `core` is a libretro `.so` and `rom` is your ROM. Place both files next to the executable. Optional `options.ini` sets core variables. SRAM is `save.srm` in this folder.]=])
+  set (ROMBUNDLER_INSTALL_DATA [=[See `desktop.md` in this zip. Edit `config.ini` so `core` is a libretro `.so` and `rom` is your ROM. Place both files next to the executable. SRAM is `save.srm` in this folder.]=])
   set (ROMBUNDLER_INSTALL_LAYOUT [=[This is a static Linux build. GLFW and OpenAL-Soft are linked into the executable.]=])
 endif ()
 
@@ -71,24 +71,8 @@ if (NOT APPLE)
   endif ()
 endif ()
 
-configure_file (
-  "${CMAKE_SOURCE_DIR}/cmake/INSTALL.md.in"
-  "${CMAKE_BINARY_DIR}/INSTALL.md"
-  @ONLY
-)
-
-add_custom_command (TARGET rombundler POST_BUILD
-  COMMAND "${CMAKE_COMMAND}" -E rm -rf "${STAGE_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${STAGE_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:rombundler>" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/src/platforms/desktop/config.ini" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_BINARY_DIR}/INSTALL.md" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/README.md" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/COPYING" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}"
-          -D "STAGE_DIR=${STAGE_DIR}"
-          -D "ZIP=${BUNDLE_ZIP}"
-          -P "${CMAKE_SOURCE_DIR}/cmake/package_zip.cmake"
-  COMMENT "Packaging dist/${BUNDLE_NAME}.zip"
+rombundler_package_dist (FILES
+  "$<TARGET_FILE:rombundler>"
+  "${CMAKE_SOURCE_DIR}/src/platforms/desktop/config.ini"
+  "${CMAKE_SOURCE_DIR}/doc/desktop.md"
 )

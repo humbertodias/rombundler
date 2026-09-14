@@ -20,12 +20,10 @@ USAGE="usage: $0 linux|windows|switch [shell|sdk] [--core core.a]
        $0 macos [x86_64|arm64] [shell|sdk]
        $0 switch /path/to/core_libretro.a"
 
-if [[ -f "${ROOT}/versions.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "${ROOT}/versions.env"
-  set +a
-fi
+set -a
+# shellcheck disable=SC1091
+source "${ROOT}/versions.env"
+set +a
 
 PLATFORM="${1:-linux}"
 shift || true
@@ -99,9 +97,9 @@ fi
 if [[ "${SKIP_DOCKER_BUILD:-}" != "1" ]]; then
   if [[ "${PLATFORM}" == "macos" ]]; then
     docker build \
-      --build-arg MACOSX_SDK="${MACOSX_SDK:-15.5}" \
-      --build-arg MACOSX_SDK_SHA256="${MACOSX_SDK_SHA256:-c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd}" \
-      --build-arg OSX_VERSION_MIN="${OSXCROSS_OSX_VERSION_MIN:-11.0}" \
+      --build-arg MACOSX_SDK="${MACOSX_SDK}" \
+      --build-arg MACOSX_SDK_SHA256="${MACOSX_SDK_SHA256}" \
+      --build-arg OSX_VERSION_MIN="${OSXCROSS_OSX_VERSION_MIN}" \
       -t "${IMAGE}" \
       -f docker/Dockerfile.macos \
       docker/
@@ -190,7 +188,5 @@ run_in_image() {
 
 run_in_image cmake --preset "${PRESET}" \
   -DROMBUNDLER_VERSION="${VERSION}" \
-  -DROMBUNDLER_GLFW_VERSION="${GLFW_VERSION:-3.4}" \
-  -DROMBUNDLER_OPENAL_VERSION="${OPENAL_VERSION:-1.24.2}" \
   "${CMAKE_CORE_ARGS[@]}"
 run_in_image cmake --build --preset "${PRESET}"
