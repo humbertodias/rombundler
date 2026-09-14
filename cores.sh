@@ -8,7 +8,7 @@
 # Change the git URL to build a different core (must ship Makefile.libretro).
 # Short alias: bash cores.sh switch genesis
 #
-# Output: cores/<port>/*_libretro*.{a,bc}
+# Output: cores/<port>/*_libretro*.a (emscripten may emit *.bc that is actually ar → renamed .a)
 # Optional: MAKE_FLAGS="HAVE_CHD=0" bash cores.sh switch <url>
 # Optional: SKIP_DOCKER_BUILD=1 (reuse existing rombundler-<port> image)
 set -euo pipefail
@@ -94,15 +94,29 @@ if [[ ! -f "${BUILD_DIR}/Makefile.libretro" ]]; then
 fi
 
 MAKE_FLAGS="${MAKE_FLAGS:-}"
+# Emscripten: plain `make` uses host cc and produces ELF .o files that wasm-ld
+# skips ("neither Wasm object file nor LLVM bitcode") → undefined retro_* symbols.
+# emmake injects CC=emcc CXX=em++ AR=emar.
 # shellcheck disable=SC2086
-docker run --rm \
-  "${DOCKER_PLATFORM[@]}" \
-  -u "$(id -u):$(id -g)" \
-  -v "${ROOT}:/src" \
-  -w "/src/${BUILD_DIR}" \
-  -e HOME=/tmp \
-  "${IMAGE}" \
-  bash -lc "make -f Makefile.libretro platform=${MAKE_PLATFORM} -j\"\$(nproc)\" ${MAKE_FLAGS}"
+if [[ "${PORT}" == "wasm" ]]; then
+  docker run --rm \
+    "${DOCKER_PLATFORM[@]}" \
+    -u "$(id -u):$(id -g)" \
+    -v "${ROOT}:/src" \
+    -w "/src/${BUILD_DIR}" \
+    -e HOME=/tmp \
+    "${IMAGE}" \
+    bash -lc "emmake make -f Makefile.libretro platform=${MAKE_PLATFORM} -j\"\$(nproc)\" ${MAKE_FLAGS}"
+else
+  docker run --rm \
+    "${DOCKER_PLATFORM[@]}" \
+    -u "$(id -u):$(id -g)" \
+    -v "${ROOT}:/src" \
+    -w "/src/${BUILD_DIR}" \
+    -e HOME=/tmp \
+    "${IMAGE}" \
+    bash -lc "make -f Makefile.libretro platform=${MAKE_PLATFORM} -j\"\$(nproc)\" ${MAKE_FLAGS}"
+fi
 
 shopt -s nullglob
 ARTIFACTS=("${BUILD_DIR}"/*_libretro*.a "${BUILD_DIR}"/*_libretro*.bc)
@@ -119,9 +133,22 @@ if [[ ${#ARTIFACTS[@]} -eq 0 ]]; then
 fi
 
 for art in "${ARTIFACTS[@]}"; do
-  cp -f "${art}" "${OUT_DIR}/"
-  echo "built: ${OUT_DIR}/$(basename "${art}")"
+  base="$(basename "${art}")"
+  dest="${OUT_DIR}/${base}"
+  # STATIC_LINKING cores (e.g. Genesis on emscripten) write an ar archive
+  # but name it *.bc. emcc treats *.bc as LLVM bitcode and fails with
+  # "expected integer" / "!<arch>". Normalize to *.a for linking.
+  if [[ "$(head -c 7 "${art}" 2>/dev/null || true)" == '!<arch>' ]]; then
+    dest="${OUT_DIR}/$(basename "${base}" .bc)"
+    case "${dest}" in
+      *.a) ;;
+      *) dest="${dest}.a" ;;
+    esac
+  fi
+  cp -f "${art}" "${dest}"
+  echo "built: ${dest}"
+  LAST_OUT="${dest}"
 done
 
 rm -rf "${BUILD_DIR}"
-echo "done. link with: bash build.sh ${PORT} ${OUT_DIR}/$(basename "${ARTIFACTS[0]}")"
+echo "done. link with: bash build.sh ${PORT} ${LAST_OUT}"

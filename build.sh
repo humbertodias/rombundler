@@ -171,8 +171,19 @@ if [[ -n "${FETCH_CORE}" ]]; then
       ;;
   esac
   SKIP_DOCKER_BUILD=1 bash "${ROOT}/cores.sh" "${PLATFORM}" "${FETCH_CORE}"
+  # Prefer real archives; normalize any leftover misnamed *.bc from older builds.
   shopt -s nullglob
-  _arts=("${ROOT}/cores/${PLATFORM}"/*_libretro*.a "${ROOT}/cores/${PLATFORM}"/*_libretro*.bc)
+  for _bc in "${ROOT}/cores/${PLATFORM}"/*_libretro*.bc; do
+    if [[ "$(head -c 7 "${_bc}" 2>/dev/null || true)" == '!<arch>' ]]; then
+      _fa="${_bc%.bc}.a"
+      cp -f "${_bc}" "${_fa}"
+      rm -f "${_bc}"
+    fi
+  done
+  _arts=("${ROOT}/cores/${PLATFORM}"/*_libretro*.a)
+  if [[ ${#_arts[@]} -eq 0 ]]; then
+    _arts=("${ROOT}/cores/${PLATFORM}"/*_libretro*.bc)
+  fi
   shopt -u nullglob
   if [[ ${#_arts[@]} -eq 0 ]]; then
     echo "cores.sh produced no archive under cores/${PLATFORM}/" >&2
@@ -190,6 +201,13 @@ if [[ -n "${CORE_LIBRARY}" ]]; then
   if [[ ! -f "${CORE_LIBRARY}" ]]; then
     echo "core library not found: ${CORE_LIBRARY}" >&2
     exit 1
+  fi
+  # Emscripten STATIC_LINKING archives are often misnamed *.bc (ar, not bitcode).
+  if [[ "${CORE_LIBRARY}" == *.bc && "$(head -c 7 "${CORE_LIBRARY}" 2>/dev/null || true)" == '!<arch>' ]]; then
+    _fixed="${CORE_LIBRARY%.bc}.a"
+    cp -f "${CORE_LIBRARY}" "${_fixed}"
+    echo "renamed ar-as-bc core to ${_fixed}"
+    CORE_LIBRARY="${_fixed}"
   fi
   if [[ -z "${FETCH_CORE}" ]]; then
     CORE_NAME="$(core_label_from "${CORE_LIBRARY}")"

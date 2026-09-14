@@ -66,17 +66,19 @@ port0 = 1
 
 ## Static core
 
-Build core + WASM package in one step (`Makefile.libretro` → often a `.bc`):
+Build core + WASM package in one step:
 
 ```shell
 bash build.sh wasm --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 # or: bash build.sh wasm --fetch-core genesis
 ```
 
+Genesis (and other `STATIC_LINKING` cores) may write a misnamed `*_emscripten.bc` that is really an `ar` archive; `cores.sh` / `build.sh` rename it to `.a` before linking. WASM core builds use `emmake` so objects are wasm32, not host ELF.
+
 Or pass an existing archive:
 
 ```shell
-bash build.sh wasm cores/wasm/genesis_plus_gx_libretro_emscripten.bc
+bash build.sh wasm cores/wasm/genesis_plus_gx_libretro_emscripten.a
 ```
 
 Change the git URL (or the Cores workflow matrix) to build a different core.
