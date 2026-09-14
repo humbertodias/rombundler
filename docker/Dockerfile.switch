@@ -1,0 +1,34 @@
+# Nintendo Switch homebrew toolchain (linux/amd64: devkitA64 host tools are x86_64).
+#   docker build --platform linux/amd64 -t rombundler-switch \
+#     -f docker/Dockerfile.switch docker/
+#
+# Toolchain only: does not clone this repo or bake ROMBundler into the image.
+
+FROM devkitpro/devkita64:latest
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PLATFORM=switch \
+    DEVKITPRO=/opt/devkitpro \
+    DEVKITARM=/opt/devkitpro/devkitARM
+
+ENV PATH="${DEVKITPRO}/tools/bin:${DEVKITPRO}/devkitA64/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        git \
+        ninja-build \
+        pkg-config \
+        python3 \
+        zip \
+    && rm -rf /var/lib/apt/lists/* \
+    && (command -v dkp-pacman >/dev/null && dkp-pacman -Syu --noconfirm || pacman -Syu --noconfirm) \
+    && (command -v dkp-pacman >/dev/null && dkp-pacman -S --noconfirm --needed switch-mesa switch-libdrm_nouveau \
+        || pacman -S --noconfirm --needed switch-mesa switch-libdrm_nouveau) \
+    && (command -v dkp-pacman >/dev/null && dkp-pacman -Scc --noconfirm || pacman -Scc --noconfirm) \
+    && git config --system --add safe.directory '*' \
+    && chmod -R a+rX ${DEVKITPRO}
+
+WORKDIR /src
+CMD ["bash"]

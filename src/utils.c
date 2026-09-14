@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <errno.h>
+
+#include "platform.h"
 
 void die(const char *fmt, ...) {
 	char buffer[4096];
@@ -11,9 +12,5 @@ void die(const char *fmt, ...) {
 	vsnprintf(buffer, sizeof(buffer), fmt, va);
 	va_end(va);
 
-	fputs(buffer, stderr);
-	fputc('\n', stderr);
-	fflush(stderr);
-
-	exit(EXIT_FAILURE);
+	platform_fatal(buffer);
 }

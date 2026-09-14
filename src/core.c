@@ -4,13 +4,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/time.h>
-
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
 
 #include "libretro.h"
 #include "utils.h"
@@ -19,20 +14,8 @@
 #include "input.h"
 #include "options.h"
 #include "config.h"
-
-#if defined(_WIN32)
-#define load_lib(L) LoadLibrary(L);
-#define load_sym(V, S) ((*(void**)&V) = GetProcAddress(core.handle, #S))
-#define close_lib(L) //(L)
-#else
-#define load_sym(V, S) do {\
-	if (!((*(void**)&V) = dlsym(core.handle, #S))) \
-		die("Failed to load symbol '" #S "'': %s", dlerror()); \
-	} while (0)
-#define load_lib(L) dlopen(L, RTLD_LAZY);
-#define close_lib(L) dlclose(L);
-#endif
-#define load_retro_sym(S) load_sym(core.S, S)
+#include "platform.h"
+#include "core_load.h"
 
 static struct {
 	void *handle;
@@ -154,7 +137,7 @@ static bool core_environment(unsigned cmd, void *data)
 		case RETRO_ENVIRONMENT_SET_HW_RENDER: {
 			struct retro_hw_render_callback *hw = (struct retro_hw_render_callback*)data;
 			hw->get_current_framebuffer = video_get_current_framebuffer;
-			hw->get_proc_address = (retro_hw_get_proc_address_t)glfwGetProcAddress;
+			hw->get_proc_address = (retro_hw_get_proc_address_t)platform_get_proc_address;
 			video_set_hw(*hw);
 			// printf("RETRO_ENVIRONMENT_SET_HW_RENDER: %d\n", hw->context_type);
 		}
@@ -198,6 +181,7 @@ void core_load(const char *sofile)
 	void (*set_audio_sample_batch)(retro_audio_sample_batch_t) = NULL;
 
 	memset(&core, 0, sizeof(core));
+	platform_prepare_core(sofile);
 	core.handle = load_lib(sofile);
 
 	if (!core.handle)
@@ -228,8 +212,8 @@ void core_load(const char *sofile)
 	set_video_refresh(video_refresh);
 	set_input_poll(input_poll_dummy);
 	set_input_state(input_state);
-	set_audio_sample(audio_sample);
-	set_audio_sample_batch(audio_sample_batch);
+	set_audio_sample(rb_audio_sample);
+	set_audio_sample_batch(rb_audio_sample_batch);
 
 	core.initialized = true;
 }
@@ -239,10 +223,10 @@ void core_load_game(const char *filename)
 	struct retro_system_av_info av = {0};
 	struct retro_system_info si = {0};
 	struct retro_game_info info = { filename, 0 };
-	FILE *file = fopen(filename, "rb");
+	FILE *file = platform_fopen(filename, "rb");
 
 	if (!file)
-		die("The core could not open the file.");
+		die("The core could not open the ROM '%s'.", filename ? filename : "(null)");
 
 	fseek(file, 0, SEEK_END);
 	info.size = ftell(file);
@@ -263,7 +247,7 @@ void core_load_game(const char *filename)
 	core.retro_get_system_av_info(&av);
 
 	video_configure(&av.geometry);
-	audio_init(av.timing.sample_rate);
+	rb_audio_init(av.timing.sample_rate);
 
 	if (g_cfg.port0) core.retro_set_controller_port_device(0, g_cfg.port0);
 	if (g_cfg.port1) core.retro_set_controller_port_device(1, g_cfg.port1);

@@ -22,26 +22,37 @@ jobs:
             runner: ubuntu-24.04
             extra: ""
             timeout: 30
+            docker_platforms: linux/amd64
           - platform: linux
             artifact: linux-aarch64
             runner: ubuntu-24.04-arm
             extra: ""
             timeout: 30
+            docker_platforms: linux/arm64
           - platform: windows
             artifact: windows-x86_64
             runner: ubuntu-24.04
             extra: ""
             timeout: 45
+            docker_platforms: linux/amd64
           - platform: macos
             artifact: macos-x86_64
             runner: ubuntu-24.04
             extra: x86_64
             timeout: 180
+            docker_platforms: linux/amd64
           - platform: macos
             artifact: macos-arm64
             runner: ubuntu-24.04
             extra: arm64
             timeout: 180
+            docker_platforms: linux/amd64
+          - platform: switch
+            artifact: switch-aarch64
+            runner: ubuntu-24.04
+            extra: ""
+            timeout: 45
+            docker_platforms: linux/amd64
 
     steps:
       - uses: actions/checkout@v7
@@ -66,6 +77,7 @@ jobs:
           tags: rombundler-${{ matrix.platform }}
           load: true
           provenance: false
+          platforms: ${{ matrix.docker_platforms }}
           build-args: |
             MACOSX_SDK=${{ env.MACOSX_SDK }}
             MACOSX_SDK_SHA256=${{ env.MACOSX_SDK_SHA256 }}

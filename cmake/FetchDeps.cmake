@@ -1,4 +1,4 @@
-# Static GLFW + OpenAL-Soft via FetchContent. Used by every port.
+# Static GLFW + OpenAL-Soft via FetchContent. Desktop ports only.
 
 include (FetchContent)
 

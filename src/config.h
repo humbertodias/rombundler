@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-typedef struct
+typedef struct config
 {
 	const char* title;
     const char* core;

@@ -5,7 +5,7 @@ else
 PRESET ?= linux
 endif
 
-.PHONY: all docker-linux docker-windows docker-macos docker-macos-arm64 clean
+.PHONY: all docker-linux docker-windows docker-macos docker-macos-arm64 docker-switch clean
 
 all:
 	cmake --preset $(PRESET)
@@ -22,6 +22,9 @@ docker-macos:
 
 docker-macos-arm64:
 	bash scripts/build.sh macos arm64
+
+docker-switch:
+	bash scripts/build.sh switch
 
 clean:
 	rm -rf build-* dist ROMBundler-* *.o rombundler rombundler.exe

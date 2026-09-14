@@ -1,3 +1,6 @@
+#ifndef ROMBUNDLER_SHADERS_H
+#define ROMBUNDLER_SHADERS_H
+
 static const char *vshader_default_src =
 	"attribute vec2 i_pos;\n"
 	"attribute vec2 i_coord;\n"
@@ -65,3 +68,5 @@ static const char *fshader_zfastlcd_src =
 			"colour.rgb*=0.6+0.4*(colour.rgb);\n"
 		"gl_FragColor = vec4(colour.rgb , 1.0);\n"
 	"}";
+
+#endif

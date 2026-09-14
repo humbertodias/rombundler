@@ -14,22 +14,25 @@ The main differences are that the frontend is controlled by an ini file instead 
 
 Dependencies are:
 
- * GLFW 3
- * OpenAL
- * OpenGL 2.1
+ * GLFW 3 (Linux, Windows, macOS)
+ * OpenAL (Linux, Windows, macOS)
+ * OpenGL 2.1 (desktop) or Mesa OpenGL 4.3 (Switch homebrew)
+ * libnx + switch-mesa (Switch)
 
-The three ports (Linux, Windows, macOS) are built in **separate** Docker images so toolchains stay decoupled. Only [Docker](https://www.docker.com/get-started/) is required:
+The ports (Linux, Windows, macOS, Nintendo Switch) are built in **separate** Docker images so toolchains stay decoupled. Only [Docker](https://www.docker.com/get-started/) is required:
 
 ```shell
 bash scripts/build.sh linux
 bash scripts/build.sh windows
 bash scripts/build.sh macos
 bash scripts/build.sh macos arm64
+bash scripts/build.sh switch
+bash scripts/build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
 ```
 
-Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`). GLFW and OpenAL-Soft are fetched and linked statically. Zips land in `dist/`.
+Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`). Desktop ports fetch and statically link GLFW and OpenAL-Soft. Switch uses libnx + Mesa EGL (no GLFW) and `audout` for audio. Zips land in `dist/`. Nintendo Switch: [doc/switch.md](doc/switch.md).
 
-Open a toolchain shell with `bash scripts/build.sh linux shell` (or `windows` / `macos`).
+Open a toolchain shell with `bash scripts/build.sh linux shell` (or `windows` / `macos` / `switch`).
 
 With a local compiler, CMake 3.24+, and Ninja:
 
@@ -57,7 +60,7 @@ aspect_ratio = 1.333333
 ```
 You can download libretro cores from http://buildbot.libretro.com/nightly/ and place it in the same folder, as well as your ROM. (But make sure to comply to the core license).
 
-For Windows, the core need to be a `.DLL`, for OSX it needs to be a `.dylib`, and for Linux a `.so`. 
+For Windows, the core need to be a `.DLL`, for OSX it needs to be a `.dylib`, and for Linux a `.so`. Nintendo Switch: [doc/switch.md](doc/switch.md).
 ROMBundler releases are for 32/64 bits and arm64.
 
 Place your ROM in the same folder. And set the ROM name in your config.ini.
