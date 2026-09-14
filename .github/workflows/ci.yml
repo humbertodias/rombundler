@@ -87,7 +87,7 @@ jobs:
       - name: Build
         env:
           SKIP_DOCKER_BUILD: "1"
-        run: bash scripts/build.sh ${{ matrix.platform }} ${{ matrix.extra }}
+        run: bash build.sh ${{ matrix.platform }} ${{ matrix.extra }}
 
       - name: Upload
         uses: actions/upload-artifact@v4

@@ -7,8 +7,8 @@ The Switch port is a single homebrew NRO. There is no `dlopen`: RetroArch `*_lib
 Needs [devkitA64 / libnx](https://devkitpro.org/) plus `switch-mesa`. Docker (linux/amd64 image `rombundler-switch`):
 
 ```shell
-bash scripts/build.sh switch
-bash scripts/build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh switch
+bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
 ```
 
 Local toolchain:
@@ -18,7 +18,7 @@ cmake --preset switch
 cmake --build --preset switch
 ```
 
-With a core: `cmake --preset switch -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Video is Mesa EGL/OpenGL 4.3; audio is libnx `audout` (no GLFW/OpenAL). Zips land in `dist/`. `bash scripts/build.sh switch` with no `.a` goes back to the dummy core.
+With a core: `cmake --preset switch -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Video is Mesa EGL/OpenGL 4.3; audio is libnx `audout` (no GLFW/OpenAL). Zips land in `dist/`. `bash build.sh switch` with no `.a` goes back to the dummy core.
 
 The `.a` may live outside this repo; `build.sh` bind-mounts it into Docker. You can also set `ROMBUNDLER_CORE_LIBRARY`.
 
@@ -63,7 +63,7 @@ make -f Makefile.libretro platform=libnx -j$(nproc)
 That produces `genesis_plus_gx_libretro_libnx.a`. You cannot extract a `.a` from `genesis_plus_gx_libretro_libnx.nro`. For cartridge ROMs (`.md`) only, `HAVE_CHD=0` on that `make` line skips libchdr.
 
 ```shell
-bash scripts/build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
 ```
 
 Install the **new** NRO from `dist/`.

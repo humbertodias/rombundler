@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Toolchain image + cmake --preset. Ports stay decoupled (Dockerfile + preset).
 #
-#   bash scripts/build.sh linux
-#   bash scripts/build.sh windows
-#   bash scripts/build.sh macos
-#   bash scripts/build.sh macos arm64
-#   bash scripts/build.sh switch
-#   bash scripts/build.sh switch /path/to/core_libretro.a
-#   bash scripts/build.sh switch --core /path/to/core_libretro.a
-#   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash scripts/build.sh switch
-#   bash scripts/build.sh linux shell
+#   bash build.sh linux
+#   bash build.sh windows
+#   bash build.sh macos
+#   bash build.sh macos arm64
+#   bash build.sh switch
+#   bash build.sh switch /path/to/core_libretro.a
+#   bash build.sh switch --core /path/to/core_libretro.a
+#   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
+#   bash build.sh linux shell
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
 USAGE="usage: $0 linux|windows|switch [shell] [--core core.a]

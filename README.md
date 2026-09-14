@@ -22,17 +22,17 @@ Dependencies are:
 The ports (Linux, Windows, macOS, Nintendo Switch) are built in **separate** Docker images so toolchains stay decoupled. Only [Docker](https://www.docker.com/get-started/) is required:
 
 ```shell
-bash scripts/build.sh linux
-bash scripts/build.sh windows
-bash scripts/build.sh macos
-bash scripts/build.sh macos arm64
-bash scripts/build.sh switch
-bash scripts/build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
+bash build.sh linux
+bash build.sh windows
+bash build.sh macos
+bash build.sh macos arm64
+bash build.sh switch
+bash build.sh switch /path/to/genesis_plus_gx_libretro_libnx.a
 ```
 
 Each command is `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`). Desktop ports fetch and statically link GLFW and OpenAL-Soft. Switch uses libnx + Mesa EGL (no GLFW) and `audout` for audio. Zips land in `dist/`. Nintendo Switch: [doc/switch.md](doc/switch.md).
 
-Open a toolchain shell with `bash scripts/build.sh linux shell` (or `windows` / `macos` / `switch`).
+Open a toolchain shell with `bash build.sh linux shell` (or `windows` / `macos` / `switch`).
 
 With a local compiler, CMake 3.24+, and Ninja:
 

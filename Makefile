@@ -12,19 +12,19 @@ all:
 	cmake --build --preset $(PRESET)
 
 docker-linux:
-	bash scripts/build.sh linux
+	bash build.sh linux
 
 docker-windows:
-	bash scripts/build.sh windows
+	bash build.sh windows
 
 docker-macos:
-	bash scripts/build.sh macos
+	bash build.sh macos
 
 docker-macos-arm64:
-	bash scripts/build.sh macos arm64
+	bash build.sh macos arm64
 
 docker-switch:
-	bash scripts/build.sh switch
+	bash build.sh switch
 
 clean:
 	rm -rf build-* dist ROMBundler-* *.o rombundler rombundler.exe

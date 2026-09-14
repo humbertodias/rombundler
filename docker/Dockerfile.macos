@@ -2,8 +2,8 @@
 # Apple’s SDK is not in this repo: the image build downloads MacOSX*.sdk.tar.xz
 # (Xcode license: https://www.apple.com/legal/sla/docs/xcode.pdf).
 #
-#   bash scripts/build.sh macos
-#   bash scripts/build.sh macos arm64
+#   bash build.sh macos
+#   bash build.sh macos arm64
 
 FROM ubuntu:24.04
 

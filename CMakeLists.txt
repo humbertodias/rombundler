@@ -60,7 +60,6 @@ target_include_directories (rombundler PRIVATE
 if (NOT NINTENDO_SWITCH)
   target_include_directories (rombundler PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
-    "${CMAKE_SOURCE_DIR}/deps/include"
   )
 endif ()
 
