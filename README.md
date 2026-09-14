@@ -6,7 +6,7 @@
 
 # ROMBundler
 
-Ship a libretro core and a ROM as one package: folder (desktop), NRO (Switch), VPK (Vita), or WASM (browser).
+Ship a libretro core and a ROM as one package.
 
 Based on [nanoarch](https://github.com/heuripedes/nanoarch). Configured with `config.ini` instead of command-line flags.
 
