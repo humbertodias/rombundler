@@ -60,6 +60,12 @@ jobs:
             extra: ""
             timeout: 45
             docker_platforms: linux/amd64
+          - platform: vita
+            artifact: vita-arm
+            runner: ubuntu-24.04
+            extra: ""
+            timeout: 45
+            docker_platforms: linux/amd64
 
     steps:
       - uses: actions/checkout@v4

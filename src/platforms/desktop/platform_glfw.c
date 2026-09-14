@@ -36,6 +36,15 @@ void platform_fatal(const char *msg)
 	exit(EXIT_FAILURE);
 }
 
+void platform_debug(const char *msg)
+{
+	if (!msg)
+		return;
+	fputs(msg, stderr);
+	fputc('\n', stderr);
+	fflush(stderr);
+}
+
 FILE *platform_fopen(const char *path, const char *mode)
 {
 	if (!path || !path[0])
@@ -54,6 +63,16 @@ void platform_prepare_core(const char *path)
 }
 
 int platform_gl_enable_texture_2d(void)
+{
+	return 1;
+}
+
+int platform_use_glsl_shaders(void)
+{
+	return 1;
+}
+
+int platform_has_audio(void)
 {
 	return 1;
 }
