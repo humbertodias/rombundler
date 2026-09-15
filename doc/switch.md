@@ -60,11 +60,11 @@ SRAM is `sdmc:/switch/rombundler/save.srm`. Fatal errors are shown on screen and
 Build the core as a libnx archive and link it in one step:
 
 ```shell
-bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+bash build.sh switch --fetch-core genesis_plus_gx
 # or: bash build.sh switch --fetch-core genesis
 ```
 
-That runs `cores.sh` then packages the NRO with `cores/switch/genesis_plus_gx_libretro_libnx.a`. For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis` skips libchdr.
+That runs `cores.sh` then packages the NRO with `cores/switch/genesis_plus_gx_libretro_libnx.a`. For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis` skips libchdr. Core names come from [`cores.env`](../cores.env) (case-insensitive).
 
 Or pass an existing archive:
 

@@ -7,8 +7,8 @@
 #   bash build.sh macos arm64
 #   bash build.sh switch
 #   bash build.sh switch /path/to/core_libretro.a
+#   bash build.sh switch --fetch-core genesis_plus_gx
 #   bash build.sh switch --fetch-core genesis
-#   bash build.sh switch --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
 #   bash build.sh vita /path/to/core_libretro.a
 #   bash build.sh wasm /path/to/core_libretro.a
 #   bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
@@ -23,11 +23,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
-USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--fetch-core url|alias] [--rom file]
+# shellcheck disable=SC1091
+source "${ROOT}/cores.sh"
+
+USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--fetch-core name] [--rom file]
        $0 macos [x86_64|arm64] [shell|sdk]
        $0 switch|vita|wasm /path/to/core_libretro.a
-       $0 switch|vita|wasm --fetch-core genesis
-       $0 wasm --fetch-core genesis --rom game.md"
+       $0 switch|vita|wasm --fetch-core genesis_plus_gx
+       $0 wasm --fetch-core genesis --rom game.md
+       Core names: see cores.env (case-insensitive)"
 
 set -a
 # shellcheck disable=SC1091
@@ -147,6 +151,12 @@ if [[ -n "${FETCH_CORE}" ]]; then
     echo "use either --fetch-core or --core / path.a, not both" >&2
     exit 1
   fi
+  if ! core_resolve "${FETCH_CORE}"; then
+    echo "unknown core '${FETCH_CORE}' — add it to cores.env or pick a name from:" >&2
+    core_list_keys | sed 's/^/  /' >&2
+    exit 1
+  fi
+  FETCH_CORE="${CORE_KEY}"
 fi
 
 if [[ -n "${WASM_ROM}" ]]; then
@@ -191,12 +201,6 @@ fi
 if [[ -n "${FETCH_CORE}" ]]; then
   echo "fetch-core: ${FETCH_CORE}"
   CORE_NAME="$(core_label_from "${FETCH_CORE}")"
-  # Resolve aliases the same way cores.sh does for a stable zip name.
-  case "${FETCH_CORE}" in
-    genesis|Genesis-Plus-GX|genesis_plus_gx)
-      CORE_NAME="$(core_label_from "Genesis-Plus-GX")"
-      ;;
-  esac
   SKIP_DOCKER_BUILD=1 bash "${ROOT}/cores.sh" "${PLATFORM}" "${FETCH_CORE}"
   # Prefer real archives; normalize any leftover misnamed *.bc from older builds.
   shopt -s nullglob

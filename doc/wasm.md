@@ -81,13 +81,13 @@ That preloads the file at `/game.md` (extension kept; basename sanitized so spac
 Build core + WASM package in one step:
 
 ```shell
-bash build.sh wasm --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+bash build.sh wasm --fetch-core genesis_plus_gx
 # or: bash build.sh wasm --fetch-core genesis
 # with ROM baked into rombundler.data:
 bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
 ```
 
-Genesis (and other `STATIC_LINKING` cores) may write a misnamed `*_emscripten.bc` that is really an `ar` archive; `cores.sh` / `build.sh` rename it to `.a` before linking. WASM core builds use `emmake` so objects are wasm32, not host ELF.
+Genesis (and other `STATIC_LINKING` cores) may write a misnamed `*_emscripten.bc` that is really an `ar` archive; `cores.sh` / `build.sh` rename it to `.a` before linking. WASM core builds use `emmake` so objects are wasm32, not host ELF. Names are registered in [`cores.env`](../cores.env).
 
 Or pass an existing archive:
 
@@ -95,4 +95,4 @@ Or pass an existing archive:
 bash build.sh wasm cores/wasm/genesis_plus_gx_libretro_emscripten.a
 ```
 
-Change the git URL (or the Cores workflow matrix) to build a different core.
+Add or change a name in [`cores.env`](../cores.env) (and the Cores workflow matrix) to build a different core.
