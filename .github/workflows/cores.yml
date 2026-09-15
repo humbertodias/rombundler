@@ -159,19 +159,24 @@ jobs:
           elif [[ "$CORE_INPUT" == "dummy" ]]; then
             echo 'cores=[]' >> "$GITHUB_OUTPUT"
           elif [[ "$CORE_INPUT" == "all" ]]; then
-            python3 -c '
-import json
-from pathlib import Path
-names = []
-for line in Path("cores.env").read_text().splitlines():
-    line = line.strip()
-    if not line or line.startswith("#") or "=" not in line:
-        continue
-    key = line.split("=", 1)[0].strip().lower()
-    if key and key not in names:
-        names.append(key)
-print("cores=" + json.dumps(names))
-' >> "$GITHUB_OUTPUT"
+            {
+              printf 'cores=['
+              first=1
+              while IFS= read -r line || [[ -n "$line" ]]; do
+                [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+                [[ "$line" != *=* ]] && continue
+                key="${line%%=*}"
+                key="$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')"
+                [[ -z "$key" ]] && continue
+                if [[ "$first" -eq 1 ]]; then
+                  first=0
+                else
+                  printf ','
+                fi
+                printf '"%s"' "$key"
+              done < cores.env
+              printf ']\n'
+            } >> "$GITHUB_OUTPUT"
           else
             printf 'cores=["%s"]\n' "$CORE_INPUT" >> "$GITHUB_OUTPUT"
           fi
