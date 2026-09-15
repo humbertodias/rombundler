@@ -10,8 +10,8 @@ on:
       publish_release:
         type: boolean
         default: false
-      core_url:
-        description: "Libretro core git URL (empty = dummy)"
+      core:
+        description: "Libretro core name from cores.env (empty = dummy)"
         type: string
         default: ""
 
@@ -112,7 +112,7 @@ jobs:
       - name: Build
         env:
           SKIP_DOCKER_BUILD: "1"
-          CORE_URL: ${{ inputs.core_url || '' }}
+          CORE_NAME_INPUT: ${{ inputs.core || '' }}
         run: |
           set -euo pipefail
           args=(${{ matrix.platform }})
@@ -120,11 +120,18 @@ jobs:
             args+=(${{ matrix.extra }})
           fi
           core_slug=dummy
-          if [[ -n "${CORE_URL}" ]]; then
+          if [[ -n "${CORE_NAME_INPUT}" && "${CORE_NAME_INPUT}" != "dummy" ]]; then
             case "${{ matrix.platform }}" in
               switch|vita|wasm)
-                args+=(--fetch-core "${CORE_URL}")
-                core_slug="$(basename "${CORE_URL}" .git)"
+                args+=(--fetch-core "${CORE_NAME_INPUT}")
+                ROOT="${PWD}"
+                # shellcheck disable=SC1091
+                source ./cores.sh
+                if ! core_resolve "${CORE_NAME_INPUT}"; then
+                  echo "unknown core '${CORE_NAME_INPUT}' (see cores.env)" >&2
+                  exit 1
+                fi
+                core_slug="${CORE_KEY}"
                 ;;
             esac
           fi

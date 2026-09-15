@@ -82,11 +82,11 @@ The `dummy.bin` from the VPK is already at `app0:/dummy.bin`. On the host that w
 Build the core and VPK in one step:
 
 ```shell
-bash build.sh vita --fetch-core https://github.com/libretro/Genesis-Plus-GX.git
+bash build.sh vita --fetch-core genesis_plus_gx
 # or: bash build.sh vita --fetch-core genesis
 ```
 
-For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh vita --fetch-core genesis` skips libchdr.
+For cartridge ROMs (`.md`) only, `MAKE_FLAGS='HAVE_CHD=0' bash build.sh vita --fetch-core genesis` skips libchdr. Core names come from [`cores.env`](../cores.env) (case-insensitive).
 
 Or pass an existing archive:
 

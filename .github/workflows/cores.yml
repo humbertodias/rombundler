@@ -1,14 +1,134 @@
 name: Cores
 
 # Build static libretro archives inside each port image.
-# Add more URLs under matrix.core_url (each URL × switch / vita / wasm).
+# workflow_dispatch: pick dummy (skip), all, or a name from cores.env.
 
 on:
   workflow_dispatch:
+    inputs:
+      core:
+        description: "Libretro core (dummy = skip; all = every name in cores.env)"
+        type: choice
+        required: true
+        default: dummy
+        options:
+          - dummy
+          - all
+          - 2048
+          - 3dengine
+          - 81
+          - a5200
+          - anarch
+          - ardens
+          - arduous
+          - armajet
+          - atari2600
+          - atari7800
+          - atari800
+          - beetle_bsnes
+          - beetle_cygne
+          - beetle_gba
+          - beetle_lynx
+          - beetle_neopop
+          - beetle_pce
+          - beetle_pce_fast
+          - beetle_pcfx
+          - beetle_psx
+          - beetle_psx_hw
+          - beetle_saturn
+          - beetle_supergrafx
+          - beetle_vb
+          - bk
+          - blastem
+          - bluemsx
+          - boom3
+          - bsnes2014
+          - bsnes_hd_beta
+          - cannonball
+          - cap32
+          - chailove
+          - clownmdemu
+          - clv
+          - craft
+          - dosbox
+          - dosbox_pure
+          - dosbox_svn
+          - duckstation
+          - easyrpg
+          - fceumm
+          - flycast
+          - freeintv
+          - fusion
+          - gambatte
+          - genesis
+          - genesis_plus_gx
+          - gpsp
+          - gw
+          - hatari
+          - jaguar
+          - lr_dosbox
+          - lua
+          - mame
+          - mame2000
+          - mame2003
+          - mame2003_plus
+          - mame2010
+          - mame2015
+          - mame2016
+          - melonds
+          - mess
+          - metal_slg
+          - mgba
+          - moonlight
+          - mupen64plus
+          - neocdex
+          - nestopia
+          - np2kai
+          - nxengine
+          - o2em
+          - openlara
+          - opera
+          - parallel_n64
+          - pcsx2
+          - pcsx_rearmed
+          - picodrive
+          - play
+          - pocketcdg
+          - pokemini
+          - ppsspp
+          - prboom
+          - prosystem
+          - puae
+          - px68k
+          - quasi88
+          - quicknes
+          - reminiscence
+          - remotejoy
+          - sameboy
+          - scummvm
+          - snes9x
+          - snes9x2002
+          - snes9x2005
+          - snes9x2005_plus
+          - snes9x2010
+          - stella
+          - superfamicast
+          - supermodel
+          - tgbdual
+          - theodore
+          - vice
+          - virtualjaguar
+          - vitaquake2
+          - vitaquake3
+          - wasm4
+          - wolf3d
+          - x1
+          - x68000
   push:
     branches: [master, main]
     paths:
       - cores.sh
+      - cores.env
       - docker/Dockerfile.switch
       - docker/Dockerfile.vita
       - docker/Dockerfile.wasm
@@ -19,25 +139,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan cores
+    runs-on: ubuntu-24.04
+    outputs:
+      cores: ${{ steps.set.outputs.cores }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set
+        name: Resolve core matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CORE_INPUT: ${{ inputs.core || 'dummy' }}
+        run: |
+          set -euo pipefail
+          # Push smoke: one known core. Dispatch: choice (dummy → empty).
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            echo 'cores=["genesis_plus_gx"]' >> "$GITHUB_OUTPUT"
+          elif [[ "$CORE_INPUT" == "dummy" ]]; then
+            echo 'cores=[]' >> "$GITHUB_OUTPUT"
+          elif [[ "$CORE_INPUT" == "all" ]]; then
+            python3 -c '
+import json
+from pathlib import Path
+names = []
+for line in Path("cores.env").read_text().splitlines():
+    line = line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    key = line.split("=", 1)[0].strip().lower()
+    if key and key not in names:
+        names.append(key)
+print("cores=" + json.dumps(names))
+' >> "$GITHUB_OUTPUT"
+          else
+            printf 'cores=["%s"]\n' "$CORE_INPUT" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
-    name: ${{ matrix.port }} - ${{ matrix.core_url }}
+    name: ${{ matrix.port }} - ${{ matrix.core }}
+    needs: plan
+    if: needs.plan.outputs.cores != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         port: [switch, vita, wasm]
-        core_url:
-          - https://github.com/libretro/Genesis-Plus-GX.git
-          # - https://github.com/libretro/beetle-ngp-libretro.git
-          # - https://github.com/libretro/snes9x.git
+        core: ${{ fromJson(needs.plan.outputs.cores) }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Core slug
-        id: meta
-        run: echo "core_name=$(basename '${{ matrix.core_url }}' .git)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -57,12 +209,12 @@ jobs:
       - name: Build core
         env:
           SKIP_DOCKER_BUILD: "1"
-        run: bash cores.sh ${{ matrix.port }} '${{ matrix.core_url }}'
+        run: bash cores.sh ${{ matrix.port }} '${{ matrix.core }}'
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: core-${{ matrix.port }}-${{ steps.meta.outputs.core_name }}
+          name: core-${{ matrix.port }}-${{ matrix.core }}
           path: |
             cores/${{ matrix.port }}/*.a
             cores/${{ matrix.port }}/*.bc
