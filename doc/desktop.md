@@ -21,7 +21,7 @@ Cores: [libretro nightly](http://buildbot.libretro.com/nightly/) (respect each c
 
 The frontend loads the ini, the core, and the ROM. You can rename `rombundler` to the game name, change the icon, and ship the zip.
 
-The sample checked into the repo is `src/platforms/desktop/config.ini` (copied into desktop zips). Nintendo Switch: [switch.md](switch.md). PlayStation Vita: [vita.md](vita.md). WebAssembly: [wasm.md](wasm.md).
+The sample checked into the repo is `src/platforms/desktop/config.ini` (copied into the desktop dist folder). Nintendo Switch: [switch.md](switch.md). PlayStation Vita: [vita.md](vita.md). WebAssembly: [wasm.md](wasm.md).
 
 ## Inputs
 

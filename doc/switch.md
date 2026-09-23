@@ -23,7 +23,7 @@ cmake --preset switch
 cmake --build --preset switch
 ```
 
-With a core: `cmake --preset switch -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Video is Mesa EGL/OpenGL 4.3; audio is libnx `audout` (no GLFW/OpenAL). Zips land in `dist/`. `bash build.sh switch` with no `.a` goes back to the dummy core.
+With a core: `cmake --preset switch -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Video is Mesa EGL/OpenGL 4.3; audio is libnx `audout` (no GLFW/OpenAL). Output is `dist/ROMBundler-Switch-<core>-aarch64/`. `bash build.sh switch` with no `.a` goes back to the dummy core.
 
 The `.a` may live outside this repo; `build.sh` bind-mounts it into Docker. You can also set `ROMBUNDLER_CORE_LIBRARY`.
 

@@ -51,11 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           SITE=dist/pages
-          SRC=""
-          for d in dist/ROMBundler-WASM-loader-*-wasm32; do
-            SRC=$d
-            break
-          done
+          SRC=dist/ROMBundler-WASM-loader-wasm32
           test -d "${SRC}"
           mkdir -p "${SITE}"
           cp "${SRC}/rombundler.js" "${SITE}/"

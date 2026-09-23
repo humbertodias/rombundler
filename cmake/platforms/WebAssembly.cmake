@@ -121,11 +121,11 @@ endif ()
 set (ROMBUNDLER_INSTALL_PLATFORM "WebAssembly")
 if (ROMBUNDLER_WASM_DYNAMIC)
   set (ROMBUNDLER_INSTALL_STEPS [=[Serve the folder over HTTP (browsers block `file://` WASM). Example: `python3 -m http.server -d . 8080` then open `http://localhost:8080/rombundler.html`. Drop a side-module `.wasm` and a ROM, or click the sample button (`dummy_core.wasm` + `dummy.bin`).]=])
-  set (ROMBUNDLER_INSTALL_DATA [=[See `wasm.md` in this zip. This build does not bake a core or a ROM. The page writes the dropped files into the Emscripten FS and `dlopen`s the `.wasm`. Build that file with `bash build.sh wasm --side-module core.a` (same Emscripten). SRAM is `/save.srm` for the session.]=])
+  set (ROMBUNDLER_INSTALL_DATA [=[See `wasm.md` in this folder. This build does not bake a core or a ROM. The page writes the dropped files into the Emscripten FS and `dlopen`s the `.wasm`. Build that file with `bash build.sh wasm --side-module core.a` (same Emscripten). SRAM is `/save.srm` for the session.]=])
   set (ROMBUNDLER_INSTALL_LAYOUT [=[Dynamic WASM loader: Emscripten MAIN_MODULE, GLFW3, WebGL2/GLES3, OpenAL. Cores are SIDE_MODULE `.wasm` files dropped on the page.]=])
 else ()
   set (ROMBUNDLER_INSTALL_STEPS [=[Serve the folder over HTTP (browsers block `file://` WASM). Example: `python3 -m http.server -d . 8080` then open `http://localhost:8080/rombundler.html`.]=])
-  set (ROMBUNDLER_INSTALL_DATA [=[See `wasm.md` in this zip. Default build uses the dummy core and `/dummy.bin` from the preload package. With `--rom game.md`, the ROM is baked into the `.data` file at `/game.md` (host filename may contain spaces). `core=` does not `dlopen` a `.js`/`.wasm` core. SRAM is `/save.srm` in the Emscripten FS (session only unless you add IDBFS).]=])
+  set (ROMBUNDLER_INSTALL_DATA [=[See `wasm.md` in this folder. Default build uses the dummy core and `/dummy.bin` from the preload package. With `--rom game.md`, the ROM is baked into the `.data` file at `/game.md` (host filename may contain spaces). `core=` does not `dlopen` a `.js`/`.wasm` core. SRAM is `/save.srm` in the Emscripten FS (session only unless you add IDBFS).]=])
   set (ROMBUNDLER_INSTALL_LAYOUT [=[Static WASM app: Emscripten GLFW3, WebGL2/GLES3, OpenAL. No runtime `dlopen`.]=])
 endif ()
 
@@ -166,11 +166,7 @@ add_custom_target (rombundler-dist ALL
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/README.md" "${STAGE_DIR}/"
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/doc/wasm.md" "${STAGE_DIR}/"
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/COPYING" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}"
-          -D "STAGE_DIR=${STAGE_DIR}"
-          -D "ZIP=${BUNDLE_ZIP}"
-          -P "${CMAKE_SOURCE_DIR}/cmake/package_zip.cmake"
-  COMMENT "Packaging dist/${BUNDLE_NAME}.zip (WASM)"
+  COMMENT "Staging ${STAGE_DIR}"
   VERBATIM
 )
 add_dependencies (rombundler-dist rombundler)

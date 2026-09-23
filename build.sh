@@ -66,7 +66,7 @@ WASM_ROM="${ROMBUNDLER_WASM_ROM:-}"
 WASM_LOADER=0
 SIDE_MODULE=""
 
-# Label used in dist/ROMBundler-<port>-<core>-<ver>-<arch>.zip
+# Label used in dist/ROMBundler-<port>-<core>-<arch>/
 core_label_from() {
   local raw="$1"
   local n

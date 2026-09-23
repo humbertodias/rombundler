@@ -11,7 +11,7 @@ Desktop (Linux, Windows, macOS): [desktop.md](desktop.md). Nintendo Switch: [swi
 
 ```shell
 bash build.sh wasm --loader
-cd dist/ROMBundler-WASM-loader-*-wasm32
+cd dist/ROMBundler-WASM-loader-wasm32
 python3 -m http.server 8080
 ```
 
@@ -30,10 +30,10 @@ That writes `dist/genesis_plus_gx_libretro_emscripten.wasm`. Drop it with the ga
 
 The static port is `rombundler.html` + `.js` + `.wasm` + `.data`. There is no `dlopen`: RetroArch cores cannot be selected from `config.ini`. The default build links a dummy core (moving color bars). A real core must be a **static** `*_libretro.a` (Emscripten) linked at compile time.
 
-Browsers block WASM from `file://`. Serve the zip contents over HTTP:
+Browsers block WASM from `file://`. Serve the folder over HTTP:
 
 ```shell
-cd dist/ROMBundler-WASM-dummy-*-wasm32
+cd dist/ROMBundler-WASM-dummy-wasm32
 python3 -m http.server 8080
 ```
 
@@ -61,7 +61,7 @@ cmake --preset wasm
 cmake --build --preset wasm
 ```
 
-With a core: `cmake --preset wasm -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Zips land in `dist/`. `bash build.sh wasm` with no `.a` goes back to the dummy core.
+With a core: `cmake --preset wasm -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Output is `dist/ROMBundler-WASM-<core>-wasm32/` (no zip). `bash build.sh wasm` with no `.a` goes back to the dummy core.
 
 Video is WebGL2 / GLES3 (`shader=` in `config.ini` is used). Audio is OpenAL via Emscripten (non-blocking; drops buffers instead of spinning). Input uses the desktop keyboard map (Z/X/arrows/Enter, etc.) plus browser gamepads through GLFW’s joystick API (`navigator.getGamepads`). Click the canvas once so the browser unlocks the Gamepad API. Mapping assumes the HTML5 Standard Gamepad layout (Xbox-style).
 
