@@ -140,14 +140,17 @@ MAKE_FLAGS="${MAKE_FLAGS:-}"
 # emmake injects CC=emcc CXX=em++ AR=emar.
 # shellcheck disable=SC2086
 if [[ "${PORT}" == "wasm" ]]; then
+	# Side modules (build.sh --side-module) reject non-PIC objects
+	# ("recompile with -fPIC"). EMCC_CFLAGS covers compiles that ignore $(fpic).
 	docker run --rm \
 		"${DOCKER_PLATFORM[@]}" \
 		-u "$(id -u):$(id -g)" \
 		-v "${ROOT}:/src" \
 		-w "/src/${BUILD_DIR}" \
 		-e HOME=/tmp \
+		-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC" \
 		"${IMAGE}" \
-		bash -lc "emmake make -f Makefile.libretro platform=${MAKE_PLATFORM} -j\"\$(nproc)\" ${MAKE_FLAGS}"
+		bash -lc "emmake make -f Makefile.libretro platform=${MAKE_PLATFORM} fpic=-fPIC -j\"\$(nproc)\" ${MAKE_FLAGS}"
 else
 	docker run --rm \
 		"${DOCKER_PLATFORM[@]}" \

@@ -40,6 +40,17 @@ static void app_cleanup(void)
 	platform_deinit();
 }
 
+static void app_loaded(void)
+{
+	core_load(g_cfg.core);
+	core_load_game(g_cfg.rom);
+
+	srm_load();
+
+	platform_set_swap_interval(g_cfg.swap_interval);
+	platform_enter_loop(app_step, app_cleanup);
+}
+
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
@@ -48,12 +59,10 @@ int main(int argc, char *argv[]) {
 	if (!platform_boot(&g_cfg))
 		die("Could not parse config.ini");
 
-	core_load(g_cfg.core);
-	core_load_game(g_cfg.rom);
-
-	srm_load();
-
-	platform_set_swap_interval(g_cfg.swap_interval);
-	platform_enter_loop(app_step, app_cleanup);
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+	platform_open_core_then(g_cfg.core, app_loaded);
+#else
+	app_loaded();
+#endif
 	return 0;
 }

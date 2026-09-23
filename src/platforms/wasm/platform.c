@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+#include <dlfcn.h>
+#endif
 
 #include "platform.h"
 #include "libretro.h"
@@ -29,6 +32,10 @@ void platform_fatal(const char *msg)
 	fputs(msg, stderr);
 	fputc('\n', stderr);
 	fflush(stderr);
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+	if (msg)
+		EM_ASM({ if (window.rbFail) window.rbFail(UTF8ToString($0)); }, msg);
+#endif
 	exit(EXIT_FAILURE);
 }
 
@@ -60,6 +67,13 @@ void platform_prepare_core(const char *path)
 	if (!path || !path[0])
 		return;
 	n = strlen(path);
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+	if (n < 5 || strcasecmp(path + n - 5, ".wasm") != 0)
+		die("This page loads a .wasm side module. Got '%s'.\n"
+		    "Build one with: bash build.sh wasm --side-module core.a",
+		    path);
+	return;
+#else
 	if ((n >= 3 && !strcasecmp(path + n - 3, ".so")) ||
 	    (n >= 4 && !strcasecmp(path + n - 4, ".dll")) ||
 	    (n >= 3 && !strcasecmp(path + n - 3, ".js")) ||
@@ -76,7 +90,46 @@ void platform_prepare_core(const char *path)
 		    "and set core = dummy (or any name without .so/.js).",
 		    path);
 #endif
+#endif
 }
+
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+static void (*core_ready_cb)(void);
+static char core_dl_path[512];
+
+/* emscripten_dlopen's JS calls both callbacks as (handle, user_data). */
+static void core_dl_ok(void *handle, void *user_data)
+{
+	(void)handle;
+	(void)user_data;
+	if (core_ready_cb)
+		core_ready_cb();
+}
+
+static void core_dl_fail(void *handle, void *user_data)
+{
+	const char *err = dlerror();
+
+	(void)handle;
+	(void)user_data;
+	die("Could not load '%s' as an Emscripten side module.\n"
+	    "Build it with the same Emscripten: bash build.sh wasm --side-module core.a\n"
+	    "%s",
+	    core_dl_path,
+	    err ? err : "dlopen failed");
+}
+
+void platform_open_core_then(const char *path, void (*ready)(void))
+{
+	core_ready_cb = ready;
+	core_dl_path[0] = '\0';
+	if (path)
+		snprintf(core_dl_path, sizeof(core_dl_path), "%s", path);
+	emscripten_dlopen(path, RTLD_NOW | RTLD_GLOBAL, NULL,
+		(em_dlopen_callback)core_dl_ok,
+		(em_arg_callback_func)core_dl_fail);
+}
+#endif
 
 int platform_gl_enable_texture_2d(void)
 {
@@ -163,8 +216,13 @@ void platform_enter_loop(void (*frame)(void), void (*cleanup)(void))
 {
 	loop_frame = frame;
 	loop_cleanup = cleanup;
-	/* fps=0 follows display refresh; simulate_infinite_loop=1 never returns. */
+	/* fps=0 follows display refresh. Dynamic builds return so the dlopen
+	 * callback can finish; the static build keeps main from returning. */
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+	emscripten_set_main_loop(wasm_main_loop, 0, 0);
+#else
 	emscripten_set_main_loop(wasm_main_loop, 0, 1);
+#endif
 }
 
 bool platform_should_close(void)

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ROMBundler</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #111;
+      color: #eee;
+      font: 16px/1.4 system-ui, sans-serif;
+    }
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    #hint {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      margin: 0;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #ccc;
+      font-size: 14px;
+      pointer-events: none;
+    }
+    #gate {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(10, 10, 10, 0.92);
+    }
+    #gate[hidden] { display: none !important; }
+    #card {
+      width: min(440px, 100%);
+      padding: 24px;
+      border: 1px solid #333;
+      border-radius: 12px;
+      background: #1b1b1b;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0 0 16px; color: #bbb; }
+    label { display: block; margin: 12px 0; }
+    input[type="file"] { display: block; margin-top: 4px; max-width: 100%; }
+    button {
+      margin: 8px 8px 0 0;
+      padding: 8px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #3a7;
+      color: #041;
+      font: inherit;
+      font-weight: 600;
+    }
+    button:disabled { opacity: 0.45; }
+    #sample { background: #444; color: #eee; }
+    #status { min-height: 1.4em; color: #fc8; white-space: pre-wrap; }
+    #names { color: #9c9; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" tabindex="-1"></canvas>
+  <p id="hint">Click the picture if there is no sound. Keyboard: arrows, Z, X, Enter.</p>
+  <div id="gate">
+    <div id="card">
+      <h1>ROMBundler</h1>
+      <p>Drop a core <strong>.wasm</strong>. The game is optional: some cores start without a ROM. The core must be a side module from this Emscripten (<code>bash build.sh wasm --side-module core.a</code>), not a .so or a RetroArch wasm.</p>
+      <p id="names">Core: none<br>Game: none</p>
+      <label>Core (.wasm)
+        <input id="core-input" type="file" accept=".wasm,application/wasm">
+      </label>
+      <label>Game
+        <input id="rom-input" type="file">
+      </label>
+      <button id="run" type="button" disabled>Run</button>
+      <button id="sample" type="button" disabled>Sample (color bars)</button>
+      <p id="status">Loading the page…</p>
+    </div>
+  </div>
+  <script>
+    var coreFile = null;
+    var romFile = null;
+    var runtimeReady = false;
+
+    function setStatus(text) {
+      var el = document.getElementById('status');
+      if (el) el.textContent = text || '';
+    }
+
+    function renderNames() {
+      var names = document.getElementById('names');
+      var run = document.getElementById('run');
+      names.innerHTML = 'Core: ' + (coreFile ? coreFile.name : 'none') +
+        '<br>Game: ' + (romFile ? romFile.name : 'none');
+      run.disabled = !(runtimeReady && coreFile);
+    }
+
+    function takeFile(file) {
+      if (!file) return;
+      if (/\.wasm$/i.test(file.name || '')) coreFile = file;
+      else romFile = file;
+      renderNames();
+    }
+
+    function romVfsName(file) {
+      var name = (file && file.name) || 'game.bin';
+      var dot = name.lastIndexOf('.');
+      var ext = '.bin';
+      if (dot > 0) {
+        ext = name.slice(dot).toLowerCase().replace(/[^a-z0-9.]/g, '');
+        if (ext.length < 2 || ext.length > 8) ext = '.bin';
+      }
+      return '/game' + ext;
+    }
+
+    function configText(romPath) {
+      return [
+        'title = ROMBundler',
+        'core = /core.wasm',
+        'rom = ' + romPath,
+        'swap_interval = 1',
+        'fullscreen = false',
+        'hide_cursor = false',
+        'map_analog_to_dpad = true',
+        'shader = default',
+        'filter = nearest',
+        'aspect_ratio = 1.333333',
+        'window_width = 800',
+        'window_height = 600',
+        'port0 = 1'
+      ].join('\n') + '\n';
+    }
+
+    function rbFail(msg) {
+      document.getElementById('gate').hidden = false;
+      setStatus(msg || 'Failed to load.');
+    }
+    window.rbFail = rbFail;
+
+    function startWith(coreBytes, romBytes, romPath) {
+      if (!Module.FS || !Module.callMain) {
+        rbFail('The page is still loading.');
+        return;
+      }
+      Module.FS.writeFile('/core.wasm', new Uint8Array(coreBytes));
+      if (romBytes)
+        Module.FS.writeFile(romPath, new Uint8Array(romBytes));
+      Module.FS.writeFile('/config.ini', configText(romBytes ? romPath : ''));
+      document.getElementById('gate').hidden = true;
+      document.getElementById('canvas').focus();
+      Module.callMain();
+    }
+    window.rbStart = startWith;
+
+    var Module = {
+      canvas: document.getElementById('canvas'),
+      print: function (text) { console.log(text); },
+      printErr: function (text) { console.error(text); },
+      onRuntimeInitialized: function () {
+        runtimeReady = true;
+        document.getElementById('sample').disabled = false;
+        setStatus('Drop a core. The game is optional.');
+        renderNames();
+      }
+    };
+
+    window.addEventListener('dragover', function (e) { e.preventDefault(); });
+    window.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (!files) return;
+      for (var i = 0; i < files.length; i++) takeFile(files[i]);
+    });
+
+    document.getElementById('core-input').addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) takeFile(e.target.files[0]);
+    });
+    document.getElementById('rom-input').addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) {
+        romFile = e.target.files[0];
+        renderNames();
+      }
+    });
+    document.getElementById('run').addEventListener('click', function () {
+      if (!coreFile) return;
+      setStatus('Loading…');
+      var reads = [coreFile.arrayBuffer()];
+      if (romFile) reads.push(romFile.arrayBuffer());
+      Promise.all(reads).then(function (bufs) {
+        startWith(bufs[0], romFile ? bufs[1] : null, romFile ? romVfsName(romFile) : '');
+      }).catch(function (err) {
+        rbFail(String(err));
+      });
+    });
+    document.getElementById('sample').addEventListener('click', function () {
+      setStatus('Downloading the sample…');
+      Promise.all([fetch('dummy_core.wasm'), fetch('dummy.bin')]).then(function (res) {
+        if (!res[0].ok || !res[1].ok) throw new Error('Sample not found (dummy_core.wasm and dummy.bin).');
+        return Promise.all([res[0].arrayBuffer(), res[1].arrayBuffer()]);
+      }).then(function (bufs) {
+        startWith(bufs[0], bufs[1], '/game.bin');
+      }).catch(function (err) {
+        rbFail(String(err));
+      });
+    });
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

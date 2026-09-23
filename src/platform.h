@@ -8,6 +8,10 @@
 struct config;
 
 int platform_boot(struct config *cfg);
+#ifdef ROMBUNDLER_WASM_DYNAMIC
+/* Async dlopen of a side module, then ready(). */
+void platform_open_core_then(const char *path, void (*ready)(void));
+#endif
 void platform_deinit(void);
 void platform_fatal(const char *msg);
 void platform_debug(const char *msg);
