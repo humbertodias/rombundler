@@ -155,7 +155,7 @@ jobs:
           set -euo pipefail
           # Push smoke: one known core. Dispatch: choice (dummy → empty).
           if [[ "$EVENT_NAME" == "push" ]]; then
-            echo 'cores=["genesis_plus_gx"]' >> "$GITHUB_OUTPUT"
+            echo 'cores=["genesis_plus_gx", "snes9x2010"]' >> "$GITHUB_OUTPUT"
           elif [[ "$CORE_INPUT" == "dummy" ]]; then
             echo 'cores=[]' >> "$GITHUB_OUTPUT"
           elif [[ "$CORE_INPUT" == "all" ]]; then
