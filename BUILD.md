@@ -86,8 +86,8 @@ bash build.sh switch cores/switch/genesis_plus_gx_libretro_libnx.a
 
 Names live in [`cores.env`](cores.env) (`NAME=git-url`). Add a line there to register a new core; lookup is case-insensitive (docs use lowercase). Archives land in `cores/<port>/` (gitignored). Optional make knobs: `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis`.
 
-CI: [`.github/workflows/cores.yml`](.github/workflows/cores.yml) — on **workflow_dispatch**, pick a core from the dropdown (`dummy` skips, `all` builds every name in `cores.env`). Push still smokes `genesis_plus_gx` × switch/vita/wasm.
+CI: [`.github/workflows/cores.yml`](.github/workflows/cores.yml) — on **workflow_dispatch**, pick a core from the dropdown (`dummy` skips, `all` builds every name in `cores.env`). Push still smokes `genesis_plus_gx` × switch/vita/wasm. The wasm job also links the chosen core into a droppable side-module `.wasm`.
 
-CD ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)): on **workflow_dispatch**, same core dropdown (`dummy` pre-selected = bundled bars; `all` = one CI matrix entry per `cores.env` name). GitHub **release** still publishes with the dummy core by default.
+CD ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)): on **workflow_dispatch**, same core dropdown (`dummy` pre-selected = bundled bars; `all` = one CI matrix entry per `cores.env` name). GitHub **release** still publishes with the dummy core by default, and also builds droppable WASM side modules for `genesis_plus_gx` and `snes9x2010`.
 
 Per-port notes: [doc/desktop.md](doc/desktop.md), [doc/switch.md](doc/switch.md), [doc/vita.md](doc/vita.md), [doc/wasm.md](doc/wasm.md).

@@ -181,3 +181,67 @@ jobs:
       publish_release: ${{ github.event_name == 'release' }}
       core: ${{ matrix.core == 'dummy' && '' || matrix.core }}
     secrets: inherit
+
+  wasm-cores:
+    name: wasm ${{ matrix.core }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        core:
+          - genesis_plus_gx
+          - snes9x2010
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile.wasm
+          tags: rombundler-wasm
+          load: true
+          provenance: false
+          platforms: linux/amd64
+          cache-from: type=gha,scope=rombundler-wasm
+          cache-to: type=gha,mode=max,scope=rombundler-wasm
+
+      - name: Build side module
+        env:
+          SKIP_DOCKER_BUILD: "1"
+          CORE_NAME: ${{ matrix.core }}
+        run: |
+          set -euo pipefail
+          bash cores.sh wasm "${CORE_NAME}"
+          shopt -s nullglob
+          arts=(cores/wasm/*.a cores/wasm/*.bc)
+          if [[ ${#arts[@]} -eq 0 ]]; then
+            echo "no archive under cores/wasm/" >&2
+            exit 1
+          fi
+          for art in "${arts[@]}"; do
+            bash build.sh wasm --side-module "${art}"
+          done
+          ls -lh dist/*.wasm
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-${{ matrix.core }}
+          path: dist/*.wasm
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Release Asset
+        if: ${{ github.event_name == 'release' }}
+        uses: alexellis/upload-assets@0.4.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          asset_paths: '["./dist/*.wasm"]'

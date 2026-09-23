@@ -1,6 +1,7 @@
 name: Cores
 
 # Build static libretro archives inside each port image.
+# The wasm job also links that archive into a droppable side-module .wasm.
 # workflow_dispatch: pick dummy (skip), all, or a name from cores.env.
 
 on:
@@ -216,12 +217,38 @@ jobs:
           SKIP_DOCKER_BUILD: "1"
         run: bash cores.sh ${{ matrix.port }} '${{ matrix.core }}'
 
-      - name: Upload
+      - name: Link WASM side module
+        if: matrix.port == 'wasm'
+        env:
+          SKIP_DOCKER_BUILD: "1"
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          arts=(cores/wasm/*.a cores/wasm/*.bc)
+          if [[ ${#arts[@]} -eq 0 ]]; then
+            echo "no archive under cores/wasm/" >&2
+            exit 1
+          fi
+          for art in "${arts[@]}"; do
+            bash build.sh wasm --side-module "${art}"
+          done
+          ls -lh dist/*.wasm
+
+      - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
           name: core-${{ matrix.port }}-${{ matrix.core }}
           path: |
             cores/${{ matrix.port }}/*.a
             cores/${{ matrix.port }}/*.bc
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload WASM side module
+        if: matrix.port == 'wasm'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-${{ matrix.core }}
+          path: dist/*.wasm
           if-no-files-found: error
           retention-days: 14
