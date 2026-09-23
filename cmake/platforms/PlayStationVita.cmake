@@ -66,8 +66,8 @@ if (ROMBUNDLER_PLATFORM_DEFINES)
 endif ()
 
 set (ROMBUNDLER_INSTALL_PLATFORM "PlayStation Vita")
-set (ROMBUNDLER_INSTALL_STEPS [=[Install ShaRKBR33D so `ur0:/data/libshacccg.suprx` exists. Copy `rombundler.vpk` (not the `.zip`) to the Vita. In VitaShell highlight the VPK and press X to install. Title ID is `ROMBUNDLE`. START+SELECT returns to LiveArea.]=])
-set (ROMBUNDLER_INSTALL_DATA [=[See `vita.md` in this zip. Copy `config.ini` to `ux0:/data/rombundler/config.ini`. Point `rom=` at a file on `ux0:`. `core=` does not load a RetroArch `.self`. SRAM is `ux0:/data/rombundler/save.srm`. Errors: `ux0:/data/rombundler/error.log`.]=])
+set (ROMBUNDLER_INSTALL_STEPS [=[Install ShaRKBR33D so `ur0:/data/libshacccg.suprx` exists. Copy `rombundler.vpk` to the Vita. In VitaShell highlight the VPK and press X to install. Title ID is `ROMBUNDLE`. START+SELECT returns to LiveArea.]=])
+set (ROMBUNDLER_INSTALL_DATA [=[See `vita.md` in this folder. Copy `config.ini` to `ux0:/data/rombundler/config.ini`. Point `rom=` at a file on `ux0:`. `core=` does not load a RetroArch `.self`. SRAM is `ux0:/data/rombundler/save.srm`. Errors: `ux0:/data/rombundler/error.log`.]=])
 set (ROMBUNDLER_INSTALL_LAYOUT [=[Static homebrew VPK: vitaGL GLSL (libshacccg) and `sceAudioOut`. No GLFW/OpenAL. No runtime `dlopen`.]=])
 
 set (VITA_APP0 "${CMAKE_SOURCE_DIR}/src/platforms/vita/app0")
@@ -125,11 +125,7 @@ add_custom_target (rombundler-dist ALL
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/README.md" "${STAGE_DIR}/"
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/doc/vita.md" "${STAGE_DIR}/"
   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/COPYING" "${STAGE_DIR}/"
-  COMMAND "${CMAKE_COMMAND}"
-          -D "STAGE_DIR=${STAGE_DIR}"
-          -D "ZIP=${BUNDLE_ZIP}"
-          -P "${CMAKE_SOURCE_DIR}/cmake/package_zip.cmake"
-  COMMENT "Packaging dist/${BUNDLE_NAME}.zip (VPK)"
+  COMMENT "Staging ${STAGE_DIR}"
   VERBATIM
 )
 if (TARGET rombundler.vpk-vpk)

@@ -42,27 +42,22 @@ jobs:
           cache-from: type=gha,scope=rombundler-wasm
           cache-to: type=gha,mode=max,scope=rombundler-wasm
 
-      - name: Build WASM
+      - name: Build WASM loader
         env:
           SKIP_DOCKER_BUILD: "1"
-        run: bash build.sh wasm
+        run: bash build.sh wasm --loader
 
       - name: Stage site
         run: |
           set -euo pipefail
           SITE=dist/pages
-          SRC=$(echo dist/ROMBundler-WASM-*-wasm32 | awk '{print $1}')
-          # Prefer dummy Pages build if several WASM stage dirs exist.
-          for d in dist/ROMBundler-WASM-*-wasm32; do
-            case "$d" in
-              *-dummy-*) SRC=$d; break ;;
-            esac
-          done
+          SRC=dist/ROMBundler-WASM-loader-wasm32
           test -d "${SRC}"
           mkdir -p "${SITE}"
           cp "${SRC}/rombundler.js" "${SITE}/"
           cp "${SRC}/rombundler.wasm" "${SITE}/"
-          cp "${SRC}/rombundler.data" "${SITE}/"
+          cp "${SRC}/dummy_core.wasm" "${SITE}/"
+          cp "${SRC}/dummy.bin" "${SITE}/"
           # Root URL serves index.html; keep Emscripten asset basenames.
           cp "${SRC}/rombundler.html" "${SITE}/index.html"
 

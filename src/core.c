@@ -37,6 +37,7 @@ static struct {
 
 static struct retro_frame_time_callback runloop_frame_time;
 static retro_usec_t runloop_frame_time_last = 0;
+static bool support_no_game;
 extern config g_cfg;
 
 static void core_log(enum retro_log_level level, const char *fmt, ...)
@@ -93,6 +94,10 @@ static bool core_environment(unsigned cmd, void *data)
 		break;
 		case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: {
 			*(bool*)data = false;
+		}
+		break;
+		case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: {
+			support_no_game = data && *(const bool *)data;
 		}
 		break;
 		case RETRO_ENVIRONMENT_SHUTDOWN: {
@@ -181,6 +186,7 @@ void core_load(const char *sofile)
 	void (*set_audio_sample_batch)(retro_audio_sample_batch_t) = NULL;
 
 	memset(&core, 0, sizeof(core));
+	support_no_game = false;
 	platform_prepare_core(sofile);
 	core.handle = load_lib(sofile);
 
@@ -218,15 +224,37 @@ void core_load(const char *sofile)
 	core.initialized = true;
 }
 
-void core_load_game(const char *filename)
+static void core_started(void)
 {
 	struct retro_system_av_info av = {0};
+
+	core.retro_get_system_av_info(&av);
+	video_configure(&av.geometry);
+	rb_audio_init(av.timing.sample_rate);
+	if (g_cfg.port0) core.retro_set_controller_port_device(0, g_cfg.port0);
+	if (g_cfg.port1) core.retro_set_controller_port_device(1, g_cfg.port1);
+	if (g_cfg.port2) core.retro_set_controller_port_device(2, g_cfg.port2);
+	if (g_cfg.port3) core.retro_set_controller_port_device(3, g_cfg.port3);
+}
+
+void core_load_game(const char *filename)
+{
 	struct retro_system_info si = {0};
 	struct retro_game_info info = { filename, 0 };
-	FILE *file = platform_fopen(filename, "rb");
+	FILE *file;
 
+	if (!filename || !filename[0]) {
+		if (!core.retro_load_game(NULL))
+			die(support_no_game
+				? "The core failed to start without a ROM."
+				: "This core needs a ROM.");
+		core_started();
+		return;
+	}
+
+	file = platform_fopen(filename, "rb");
 	if (!file)
-		die("The core could not open the ROM '%s'.", filename ? filename : "(null)");
+		die("The core could not open the ROM '%s'.", filename);
 
 	fseek(file, 0, SEEK_END);
 	info.size = ftell(file);
@@ -244,14 +272,7 @@ void core_load_game(const char *filename)
 	if (!core.retro_load_game(&info))
 		die("The core failed to load the content.");
 
-	core.retro_get_system_av_info(&av);
-
-	video_configure(&av.geometry);
-	rb_audio_init(av.timing.sample_rate);
-	if (g_cfg.port0) core.retro_set_controller_port_device(0, g_cfg.port0);
-	if (g_cfg.port1) core.retro_set_controller_port_device(1, g_cfg.port1);
-	if (g_cfg.port2) core.retro_set_controller_port_device(2, g_cfg.port2);
-	if (g_cfg.port3) core.retro_set_controller_port_device(3, g_cfg.port3);
+	core_started();
 }
 
 void core_run()

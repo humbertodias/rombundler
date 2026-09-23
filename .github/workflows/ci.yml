@@ -147,6 +147,27 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Zip dist folders for release
+        if: ${{ inputs.publish_release }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          found=0
+          for dir in dist/ROMBundler-*; do
+            [ -d "${dir}" ] || continue
+            found=1
+            python3 - "${dir}" << 'PY'
+          import pathlib, sys, zipfile
+          src = pathlib.Path(sys.argv[1])
+          dest = pathlib.Path(str(src) + ".zip")
+          with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as archive:
+              for path in src.rglob("*"):
+                  if path.is_file():
+                      archive.write(path, path.relative_to(src))
+          PY
+          done
+          test "${found}" -eq 1
+
       - name: Upload Release Asset
         if: ${{ inputs.publish_release }}
         uses: alexellis/upload-assets@0.4.1

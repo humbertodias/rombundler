@@ -23,13 +23,15 @@ bash build.sh switch --fetch-core genesis
 bash build.sh vita
 bash build.sh vita --fetch-core genesis
 bash build.sh wasm
+bash build.sh wasm --loader
+bash build.sh wasm --side-module core_libretro.a
 bash build.sh wasm --fetch-core genesis_plus_gx
 bash build.sh wasm --fetch-core genesis --rom game.md
 ```
 
-`--fetch-core` (switch / vita / wasm only) runs [`cores.sh`](cores.sh) in the same image, then links the resulting `.a` / `.bc` into ROMBundler. Pass a **name** from [`cores.env`](cores.env) (case-insensitive — prefer lowercase). Or pass an existing archive path / `--core` as before. WASM also accepts `--rom` to preload a game into the Emscripten FS (required for Genesis — it will not run on `/dummy.bin`).
+`--fetch-core` (switch / vita / wasm only) runs [`cores.sh`](cores.sh) in the same image, then links the resulting `.a` / `.bc` into ROMBundler. Pass a **name** from [`cores.env`](cores.env) (case-insensitive — prefer lowercase). Or pass an existing archive path / `--core` as before. WASM also accepts `--rom` to preload a game into the Emscripten FS (required for Genesis — it will not run on `/dummy.bin`). `bash build.sh wasm --loader` is the GitHub Pages page: it does not bake a core or a ROM. `bash build.sh wasm --side-module core.a` writes `dist/<core>.wasm`, a side module that page can load.
 
-Each command runs `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop links GLFW and OpenAL-Soft statically. Switch and Vita have no GLFW/OpenAL. WASM uses Emscripten ports. Zips land in `dist/` as `ROMBundler-<port>-<core>-<version>-<arch>.zip` (`core` is `dummy` unless you pass `--fetch-core` / a `.a`).
+Each command runs `cmake --preset` inside the image (`linux`, `windows`, `macos-x86_64`, `macos-arm64`, `switch`, `vita`, `wasm`). Desktop links GLFW and OpenAL-Soft statically. Switch and Vita have no GLFW/OpenAL. WASM uses Emscripten ports. Output is the folder `dist/ROMBundler-<port>-<core>-<arch>/` (`core` is `dummy` unless you pass `--fetch-core` / a `.a`). The git version is not part of the name, and the build does not write a zip.
 
 ### Toolchain shell
 

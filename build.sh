@@ -12,6 +12,8 @@
 #   bash build.sh vita /path/to/core_libretro.a
 #   bash build.sh wasm /path/to/core_libretro.a
 #   bash build.sh wasm --fetch-core genesis --rom /path/to/game.md
+#   bash build.sh wasm --loader
+#   bash build.sh wasm --side-module cores/wasm/core_libretro.a
 #   bash build.sh switch --core /path/to/core_libretro.a
 #   ROMBUNDLER_CORE_LIBRARY=/path/to/core.a bash build.sh switch
 #   bash build.sh linux shell
@@ -31,6 +33,8 @@ USAGE="usage: $0 linux|windows|switch|vita|wasm [shell|sdk] [--core core.a] [--f
        $0 switch|vita|wasm /path/to/core_libretro.a
        $0 switch|vita|wasm --fetch-core genesis_plus_gx
        $0 wasm --fetch-core genesis --rom game.md
+       $0 wasm --loader
+       $0 wasm --side-module core_libretro.a
        Core names: see cores.env (case-insensitive)"
 
 set -a
@@ -59,8 +63,10 @@ CORE_LIBRARY="${ROMBUNDLER_CORE_LIBRARY:-}"
 FETCH_CORE=""
 CORE_NAME="${ROMBUNDLER_CORE_NAME:-dummy}"
 WASM_ROM="${ROMBUNDLER_WASM_ROM:-}"
+WASM_LOADER=0
+SIDE_MODULE=""
 
-# Label used in dist/ROMBundler-<port>-<core>-<ver>-<arch>.zip
+# Label used in dist/ROMBundler-<port>-<core>-<arch>/
 core_label_from() {
   local raw="$1"
   local n
@@ -119,6 +125,22 @@ while [[ $# -gt 0 ]]; do
       WASM_ROM="${1#--rom=}"
       shift
       ;;
+    --loader)
+      WASM_LOADER=1
+      shift
+      ;;
+    --side-module)
+      SIDE_MODULE="${2:-}"
+      if [[ -z "${SIDE_MODULE}" ]]; then
+        echo "${USAGE}" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    --side-module=*)
+      SIDE_MODULE="${1#--side-module=}"
+      shift
+      ;;
     x86_64|amd64|arm64|aarch64|static)
       MAC_ARCH="$1"
       shift
@@ -157,6 +179,29 @@ if [[ -n "${FETCH_CORE}" ]]; then
     exit 1
   fi
   FETCH_CORE="${CORE_KEY}"
+fi
+
+if [[ "${WASM_LOADER}" -eq 1 || -n "${SIDE_MODULE}" ]]; then
+  if [[ "${PLATFORM}" != "wasm" ]]; then
+    echo "--loader and --side-module are only supported for the wasm port" >&2
+    exit 1
+  fi
+fi
+
+if [[ "${WASM_LOADER}" -eq 1 ]]; then
+  if [[ -n "${FETCH_CORE}" || -n "${CORE_LIBRARY}" || -n "${WASM_ROM}" ]]; then
+    echo "--loader does not bake a core or a ROM (drop both on the page)" >&2
+    exit 1
+  fi
+  CORE_NAME="loader"
+fi
+
+if [[ -n "${SIDE_MODULE}" ]]; then
+  if [[ ! -f "${SIDE_MODULE}" ]]; then
+    echo "side module archive not found: ${SIDE_MODULE}" >&2
+    exit 1
+  fi
+  SIDE_MODULE="$(cd "$(dirname "${SIDE_MODULE}")" && pwd)/$(basename "${SIDE_MODULE}")"
 fi
 
 if [[ -n "${WASM_ROM}" ]]; then
@@ -262,6 +307,16 @@ if [[ -n "${WASM_ROM}" ]]; then
   fi
 fi
 
+SIDE_CONTAINER=""
+if [[ -n "${SIDE_MODULE}" ]]; then
+  if [[ "${SIDE_MODULE}" == "${ROOT}/"* ]]; then
+    SIDE_CONTAINER="/src/${SIDE_MODULE#"${ROOT}"/}"
+  else
+    SIDE_CONTAINER="/side/$(basename "${SIDE_MODULE}")"
+    DOCKER_MOUNTS+=(-v "${SIDE_MODULE}:${SIDE_CONTAINER}:ro")
+  fi
+fi
+
 PRESET="${PLATFORM}"
 if [[ "${PLATFORM}" == "macos" ]]; then
   case "${MAC_ARCH}" in
@@ -317,11 +372,17 @@ else
 fi
 
 CMAKE_ROM_ARGS=()
+CMAKE_WASM_ARGS=()
 if [[ "${PLATFORM}" == "wasm" ]]; then
   if [[ -n "${ROM_CMAKE_PATH}" ]]; then
     CMAKE_ROM_ARGS=(-DROMBUNDLER_WASM_ROM="${ROM_CMAKE_PATH}")
   else
     CMAKE_ROM_ARGS=(-DROMBUNDLER_WASM_ROM=)
+  fi
+  if [[ "${WASM_LOADER}" -eq 1 ]]; then
+    CMAKE_WASM_ARGS=(-DROMBUNDLER_WASM_DYNAMIC=ON)
+  else
+    CMAKE_WASM_ARGS=(-DROMBUNDLER_WASM_DYNAMIC=OFF)
   fi
 fi
 
@@ -336,9 +397,24 @@ run_in_image() {
     "$@"
 }
 
+if [[ -n "${SIDE_CONTAINER}" ]]; then
+  _side_base="$(basename "${SIDE_MODULE}")"
+  _side_base="${_side_base%.a}"
+  _side_base="${_side_base%.bc}"
+  mkdir -p "${ROOT}/dist"
+  echo "side-module: dist/${_side_base}.wasm"
+  run_in_image emcc -sSIDE_MODULE=1 -O2 \
+    -o "/src/dist/${_side_base}.wasm" \
+    -Wl,--whole-archive "${SIDE_CONTAINER}" -Wl,--no-whole-archive
+  if [[ "${WASM_LOADER}" -eq 0 && -z "${CORE_CMAKE_PATH}" && -z "${ROM_CMAKE_PATH}" ]]; then
+    exit 0
+  fi
+fi
+
 run_in_image cmake --preset "${PRESET}" \
   -DROMBUNDLER_VERSION="${VERSION}" \
   -DROMBUNDLER_CORE_NAME="${CORE_NAME}" \
   "${CMAKE_CORE_ARGS[@]}" \
-  "${CMAKE_ROM_ARGS[@]}"
+  "${CMAKE_ROM_ARGS[@]}" \
+  "${CMAKE_WASM_ARGS[@]}"
 run_in_image cmake --build --preset "${PRESET}"

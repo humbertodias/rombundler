@@ -30,7 +30,7 @@ endif ()
 
 set (ROMBUNDLER_INSTALL_PLATFORM "Nintendo Switch")
 set (ROMBUNDLER_INSTALL_STEPS [=[Copy `rombundler.nro` to `sdmc:/switch/` (Atmosphere / hbmenu) or send it with `nxlink`. Plus+Minus returns to the homebrew menu.]=])
-set (ROMBUNDLER_INSTALL_DATA [=[See `switch.md` in this zip. Copy `config.ini` to `sdmc:/switch/rombundler/config.ini`. Point `rom=` at a file on the SD card. `core=` does not load a RetroArch `*_libnx.nro`. SRAM is `sdmc:/switch/rombundler/save.srm`. Errors: `sdmc:/switch/rombundler/error.log`.]=])
+set (ROMBUNDLER_INSTALL_DATA [=[See `switch.md` in this folder. Copy `config.ini` to `sdmc:/switch/rombundler/config.ini`. Point `rom=` at a file on the SD card. `core=` does not load a RetroArch `*_libnx.nro`. SRAM is `sdmc:/switch/rombundler/save.srm`. Errors: `sdmc:/switch/rombundler/error.log`.]=])
 set (ROMBUNDLER_INSTALL_LAYOUT [=[Static homebrew NRO: Mesa EGL/OpenGL and libnx `audout`. No GLFW/OpenAL. No runtime `dlopen`.]=])
 
 find_program (NACPTOOL nacptool REQUIRED)
@@ -63,7 +63,7 @@ add_custom_command (TARGET rombundler POST_BUILD
 )
 
 rombundler_package_dist (
-  COMMENT "Packaging dist/${BUNDLE_NAME}.zip (NRO)"
+  COMMENT "Staging dist/${BUNDLE_NAME}"
   FILES
     "${NX_NRO}"
     "${NX_ROMFS}/config.ini"

@@ -1,4 +1,4 @@
-# Shared frontend target + dist zip. Call after ROMBUNDLER_PLATFORM_* and
+# Shared frontend target + dist folder. Call after ROMBUNDLER_PLATFORM_* and
 # ROMBUNDLER_INSTALL_* are set. FILES are extra copies next to README/COPYING/INSTALL.md.
 
 function (rombundler_add_frontend)
@@ -14,7 +14,7 @@ endfunction ()
 function (rombundler_package_dist)
   cmake_parse_arguments (P "" "COMMENT" "FILES" ${ARGN})
   if (NOT P_COMMENT)
-    set (P_COMMENT "Packaging dist/${BUNDLE_NAME}.zip")
+    set (P_COMMENT "Staging dist/${BUNDLE_NAME}")
   endif ()
 
   # configure_file @ONLY reads this function's scope; copy install strings in.
@@ -41,10 +41,6 @@ function (rombundler_package_dist)
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_BINARY_DIR}/INSTALL.md" "${STAGE_DIR}/"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/README.md" "${STAGE_DIR}/"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/COPYING" "${STAGE_DIR}/"
-    COMMAND "${CMAKE_COMMAND}"
-            -D "STAGE_DIR=${STAGE_DIR}"
-            -D "ZIP=${BUNDLE_ZIP}"
-            -P "${CMAKE_SOURCE_DIR}/cmake/package_zip.cmake"
   )
 
   add_custom_command (TARGET rombundler POST_BUILD

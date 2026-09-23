@@ -16,7 +16,7 @@ rm -rf build-vita
 bash build.sh vita
 ```
 
-4. Copy **`dist/rombundler.vpk`** to the Vita. Do **not** install the `.zip` (that zip only *contains* the VPK). In VitaShell: highlight `rombundler.vpk` → **X** → Install. Confirm the unknown-source prompt. Title ID is **`ROMBUNDLE`** (a new ID; delete `ux0:app/RMBL00001` if it is still there). After install you should already have a bubble named **ROMBundler**. If not: delete `ux0:app/ROMBUNDLE`, VitaShell **△ → Refresh livearea**, then install the VPK again. Fallback: unzip the VPK (it is a zip) into `ux0:app/ROMBUNDLE/` so that folder contains `eboot.bin` and `sce_sys/`, then Refresh livearea (it must say it refreshed at least 1 item). Enable **Settings → HENkaku → Unsafe homebrew**. You can still run `ux0:app/ROMBUNDLE/eboot.bin` from VitaShell. The bubble uses a generic vitasdk sample icon.
+4. Copy **`dist/rombundler.vpk`** to the Vita. In VitaShell: highlight `rombundler.vpk` → **X** → Install. Confirm the unknown-source prompt. Title ID is **`ROMBUNDLE`** (a new ID; delete `ux0:app/RMBL00001` if it is still there). After install you should already have a bubble named **ROMBundler**. If not: delete `ux0:app/ROMBUNDLE`, VitaShell **△ → Refresh livearea**, then install the VPK again. Fallback: unzip the VPK (it is a zip) into `ux0:app/ROMBUNDLE/` so that folder contains `eboot.bin` and `sce_sys/`, then Refresh livearea (it must say it refreshed at least 1 item). Enable **Settings → HENkaku → Unsafe homebrew**. You can still run `ux0:app/ROMBUNDLE/eboot.bin` from VitaShell. The bubble uses a generic vitasdk sample icon.
 5. Dummy build: you should see color bars. START+SELECT (about 0.75 s) returns to LiveArea.
 6. If the screen stays black, open `ux0:/data/rombundler/error.log`. `boot: v7-hw` confirms this hardware build. A missing compiler dies with a message about `libshacccg.suprx`.
 
@@ -65,7 +65,7 @@ cmake --preset vita
 cmake --build --preset vita
 ```
 
-With a core: `cmake --preset vita -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Zips land in `dist/`. `bash build.sh vita` with no `.a` goes back to the dummy core.
+With a core: `cmake --preset vita -DROMBUNDLER_CORE_LIBRARY=/path/to/core.a`. Output is `dist/ROMBundler-Vita-<core>-arm/` plus `dist/rombundler.vpk`. `bash build.sh vita` with no `.a` goes back to the dummy core.
 
 The `.a` may live outside this repo; `build.sh` bind-mounts it into Docker. You can also set `ROMBUNDLER_CORE_LIBRARY`.
 
