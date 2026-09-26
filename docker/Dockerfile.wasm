@@ -8,14 +8,18 @@ FROM emscripten/emsdk:6.0.8
 
 ENV PLATFORM=wasm \
     EMSDK=/emsdk \
-    PATH="/emsdk:/emsdk/upstream/emscripten:/opt/cmake/bin:${PATH}"
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH="/usr/local/cargo/bin:/emsdk:/emsdk/upstream/emscripten:/opt/cmake/bin:${PATH}"
 
 ARG CMAKE_VERSION=3.31.6
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
         curl \
         ninja-build \
+        pkg-config \
         zip \
     && curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
         | tar -xz -C /opt \
@@ -23,6 +27,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*' \
     && cmake --version
+
+# cores.sh runs the container as the host uid and enters with bash -lc,
+# which rebuilds PATH. profile.d puts cargo back. The emscripten target
+# makes `cargo rustc --crate-type staticlib` emit a .a emcc can link.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+        sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path \
+    && rustup target add wasm32-unknown-emscripten \
+    && chmod -R a+rwX "${RUSTUP_HOME}" "${CARGO_HOME}" \
+    && printf 'export RUSTUP_HOME=%s\nexport CARGO_HOME=%s\nexport PATH="%s/bin:${PATH}"\n' \
+        "${RUSTUP_HOME}" "${CARGO_HOME}" "${CARGO_HOME}" > /etc/profile.d/rust.sh \
+    && cargo --version \
+    && rustup target list --installed | grep -qx wasm32-unknown-emscripten
 
 WORKDIR /src
 CMD ["bash"]

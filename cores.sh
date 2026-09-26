@@ -104,6 +104,10 @@ core_assemble_cmd() {
 		if [[ "${PORT}" == "wasm" ]]; then
 			cmd="emcmake ${cmd}"
 		fi
+	elif [[ "${cmd}" == cargo\ * && "${PORT}" == "wasm" ]]; then
+		if [[ "${cmd}" != *" --target "* && "${cmd}" != *"--target="* ]]; then
+			cmd+=" --target wasm32-unknown-emscripten"
+		fi
 	fi
 	printf '%s\n' "${cmd}"
 }
@@ -214,6 +218,10 @@ fi
 DOCKER_ENV=(-e HOME=/tmp -e CORE_BUILD_CMD="${RUN_CMD}")
 if [[ "${PORT}" == "wasm" ]]; then
 	DOCKER_ENV+=(-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC")
+	# Side modules reject non-PIC objects. Rust does not read EMCC_CFLAGS.
+	if [[ "${CORE_CMD:-}" == cargo\ * ]]; then
+		DOCKER_ENV+=(-e RUSTFLAGS="${RUSTFLAGS:-} -C relocation-model=pic")
+	fi
 fi
 docker run --rm \
 	"${DOCKER_PLATFORM[@]}" \
