@@ -25,6 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*'
 
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    . "$HOME/.cargo/env" && \
+    rustup toolchain install stable && \
+    rustup default stable
+
 # switch-mesa is not always in the base image. pkg.devkitpro.org often returns 403;
 # dkp-pacman is the real client (there is no `pacman` on PATH). Retry instead of
 # falling through. Skip the fetch when EGL is already installed.
