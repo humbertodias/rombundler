@@ -123,6 +123,7 @@ on:
           - wolf3d
           - x1
           - x68000
+          - zeebx
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
