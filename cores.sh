@@ -82,8 +82,8 @@ core_assemble_cmd() {
 	local cmd="${CORE_CMD:-make -f Makefile.libretro}"
 
 	# cores.env names one command. The Switch entry builds the Horizon
-	# staticlib. Vita and wasm still want a cargo staticlib; wasm then
-	# rebuilds std with panic=abort (see the cargo branch below).
+	# staticlib. Vita and wasm still want a cargo staticlib, then a
+	# target-specific std rebuild (see the cargo branches below).
 	if [[ "${PORT}" != "switch" && "${cmd}" == *frontends/switch/compilar.sh* ]]; then
 		cmd="cargo rustc --release -p zeebx-libretro --crate-type staticlib"
 	fi
@@ -117,6 +117,16 @@ core_assemble_cmd() {
 		fi
 		# rustc's emscripten target references __cpp_exception unless panic
 		# is abort. The prebuilt std is unwind, so it has to be rebuilt too.
+		if [[ "${cmd}" != *"-Z build-std"* ]]; then
+			cmd+=" -Z build-std=std,panic_abort"
+		fi
+	elif [[ "${cmd}" == cargo\ * && "${PORT}" == "vita" ]]; then
+		# Host cargo emits the runner's ELF. arm-vita-eabi-ld reports
+		# "file format not recognized" for anything that is not ARM.
+		if [[ "${cmd}" != *" --target "* && "${cmd}" != *"--target="* ]]; then
+			cmd+=" --target armv7-sony-vita-newlibeabihf"
+		fi
+		# No prebuilt std for this tier-3 target.
 		if [[ "${cmd}" != *"-Z build-std"* ]]; then
 			cmd+=" -Z build-std=std,panic_abort"
 		fi
@@ -233,18 +243,29 @@ fi
 # emmake injects CC=emcc CXX=em++ AR=emar. EMCC_CFLAGS=-fPIC covers compiles
 # that ignore $(fpic); side modules reject non-PIC objects.
 DOCKER_ENV=(-e HOME=/tmp -e CORE_BUILD_CMD="${RUN_CMD}")
-	if [[ "${PORT}" == "wasm" ]]; then
-		DOCKER_ENV+=(-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC")
-		# Side modules reject non-PIC objects. Rust does not read EMCC_CFLAGS.
-		# Match RUN_CMD: cores.env may name compilar.sh, which wasm rewrites
-		# to cargo. panic=abort has to cover the rebuilt std as well.
-		if [[ "${RUN_CMD}" == cargo\ * ]]; then
-			DOCKER_ENV+=(
-				-e RUSTC_BOOTSTRAP=1
-				-e "CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS=-C link-self-contained=no -C panic=abort -C relocation-model=pic ${RUSTFLAGS:-}"
-			)
-		fi
+if [[ "${PORT}" == "wasm" ]]; then
+	DOCKER_ENV+=(-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC")
+	# Side modules reject non-PIC objects. Rust does not read EMCC_CFLAGS.
+	# Match RUN_CMD: cores.env may name compilar.sh, which wasm rewrites
+	# to cargo. panic=abort has to cover the rebuilt std as well.
+	if [[ "${RUN_CMD}" == cargo\ * ]]; then
+		DOCKER_ENV+=(
+			-e RUSTC_BOOTSTRAP=1
+			-e "CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS=-C link-self-contained=no -C panic=abort -C relocation-model=pic ${RUSTFLAGS:-}"
+		)
 	fi
+elif [[ "${PORT}" == "vita" && "${RUN_CMD}" == cargo\ * ]]; then
+	# cc/rusqlite do not infer arm-vita-eabi-* from this triple.
+	DOCKER_ENV+=(
+		-e RUSTC_BOOTSTRAP=1
+		-e CC_armv7_sony_vita_newlibeabihf=/usr/local/vitasdk/bin/arm-vita-eabi-gcc
+		-e CXX_armv7_sony_vita_newlibeabihf=/usr/local/vitasdk/bin/arm-vita-eabi-g++
+		-e AR_armv7_sony_vita_newlibeabihf=/usr/local/vitasdk/bin/arm-vita-eabi-ar
+		-e CARGO_TARGET_ARMV7_SONY_VITA_NEWLIBEABIHF_LINKER=/usr/local/vitasdk/bin/arm-vita-eabi-gcc
+		-e "CARGO_TARGET_ARMV7_SONY_VITA_NEWLIBEABIHF_RUSTFLAGS=-C link-self-contained=no -C panic=abort ${RUSTFLAGS:-}"
+		-e "LIBSQLITE3_FLAGS=-DSQLITE_OMIT_WAL -DSQLITE_MAX_MMAP_SIZE=0 -DSQLITE_OMIT_LOAD_EXTENSION"
+	)
+fi
 docker run --rm \
 	"${DOCKER_PLATFORM[@]}" \
 	-u "$(id -u):$(id -g)" \
