@@ -9,7 +9,7 @@ on:
         description: "Libretro core (dummy = color bars; all = every name in cores.env)"
         type: choice
         required: true
-        default: dummy
+        default: zeebx
         options:
           - dummy
           - all
