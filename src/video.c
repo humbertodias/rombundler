@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <math.h>
 
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
+
 #include <glad/glad.h>
 
 #include "libretro.h"
@@ -44,6 +48,7 @@ static struct {
 
 	GLuint pitch;
 	GLint tex_w, tex_h;
+	GLint gl_w, gl_h;
 	GLuint clip_w, clip_h;
 	float aspect_ratio;
 	unsigned rot;
@@ -274,8 +279,12 @@ void video_set_rotation(unsigned rot)
 
 void create_window(int width, int height)
 {
+	static int gl_ready;
+
 	platform_create_window(width, height, g_cfg.title, g_cfg.fullscreen,
 		g_cfg.hide_cursor, video.hw.context_type, video.hw.version_major, video.hw.version_minor);
+	if (gl_ready)
+		return;
 
 	if (!gladLoadGLLoader((GLADloadproc)platform_get_proc_address))
 		die("Failed to initialize OpenGL functions");
@@ -284,10 +293,17 @@ void create_window(int width, int height)
 	if (platform_use_glsl_shaders())
 		init_shaders();
 
-	platform_set_swap_interval(1);
+	/* Interval 1 waits on a vsync the console has not started yet, so the
+	 * first swap never returns and the panel stays black. */
+	platform_set_swap_interval(0);
 
 	if (platform_gl_enable_texture_2d())
 		glEnable(GL_TEXTURE_2D);
+	gl_ready = 1;
+	glClearColor(0.08f, 0.09f, 0.12f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	platform_swap_buffers();
+	platform_debug("window");
 }
 
 void video_should_close(int v)
@@ -308,7 +324,91 @@ static GLenum tex_internal_format(void)
 			return GL_RGB5_A1;
 		return video.pixtype == GL_RGB ? GL_RGB : GL_RGBA;
 	}
+	/* Core profile has no RGB565 texture. Mesa on the console rejects it and
+	 * the sampled frame is black. Ryujinx accepts the format. */
 	return GL_RGBA8;
+}
+
+static int software_rgba_upload(void)
+{
+	return !platform_gl_packed_uploads() &&
+		(video.pixfmt == GL_UNSIGNED_SHORT_5_6_5 ||
+		 video.pixfmt == GL_UNSIGNED_SHORT_5_5_5_1);
+}
+
+static unsigned char *expand_to_rgba(const void *data, unsigned width,
+	unsigned height, size_t pitch)
+{
+	static unsigned char *dst;
+	static size_t dst_cap;
+	size_t need = (size_t)width * height * 4u;
+	const unsigned char *src = data;
+	unsigned y, x;
+	int is565 = video.pixfmt == GL_UNSIGNED_SHORT_5_6_5;
+
+	if (!width || !height || pitch < (size_t)width * 2u)
+		return NULL;
+	if (need > dst_cap) {
+		free(dst);
+		dst = malloc(need);
+		dst_cap = dst ? need : 0;
+	}
+	if (!dst)
+		return NULL;
+	for (y = 0; y < height; y++) {
+		const unsigned char *row = src + (size_t)y * pitch;
+		unsigned char *out = dst + (size_t)y * width * 4u;
+
+#if defined(__aarch64__)
+		if (is565) {
+			const uint16_t *pix = (const uint16_t *)row;
+			unsigned n = 0;
+
+			for (; n + 8 <= width; n += 8) {
+				uint16x8_t p = vld1q_u16(pix + n);
+				uint16x8_t r5 = vshrq_n_u16(p, 11);
+				uint16x8_t g6 = vandq_u16(vshrq_n_u16(p, 5), vdupq_n_u16(63));
+				uint16x8_t b5 = vandq_u16(p, vdupq_n_u16(31));
+				uint8x8x4_t px;
+
+				px.val[0] = vmovn_u16(vorrq_u16(vshlq_n_u16(r5, 3), vshrq_n_u16(r5, 2)));
+				px.val[1] = vmovn_u16(vorrq_u16(vshlq_n_u16(g6, 2), vshrq_n_u16(g6, 4)));
+				px.val[2] = vmovn_u16(vorrq_u16(vshlq_n_u16(b5, 3), vshrq_n_u16(b5, 2)));
+				px.val[3] = vdup_n_u8(255);
+				vst4_u8(out + n * 4u, px);
+			}
+			x = n;
+		} else {
+			x = 0;
+		}
+#else
+		x = 0;
+#endif
+		out += x * 4u;
+		for (; x < width; x++) {
+			unsigned p = (unsigned)row[x * 2u] | ((unsigned)row[x * 2u + 1] << 8);
+			unsigned r, g, b;
+
+			if (is565) {
+				r = (p >> 11) & 31u;
+				g = (p >> 5) & 63u;
+				b = p & 31u;
+				out[0] = (unsigned char)((r << 3) | (r >> 2));
+				out[1] = (unsigned char)((g << 2) | (g >> 4));
+				out[2] = (unsigned char)((b << 3) | (b >> 2));
+			} else {
+				r = (p >> 10) & 31u;
+				g = (p >> 5) & 31u;
+				b = p & 31u;
+				out[0] = (unsigned char)((r << 3) | (r >> 2));
+				out[1] = (unsigned char)((g << 3) | (g >> 2));
+				out[2] = (unsigned char)((b << 3) | (b >> 2));
+			}
+			out[3] = 255;
+			out += 4;
+		}
+	}
+	return dst;
 }
 
 static void init_framebuffer(int width, int height)
@@ -356,13 +456,16 @@ void video_set_hw(struct retro_hw_render_callback hw)
 	video.hw = hw;
 }
 
-static void noop() {}
+static void noop(void) {}
 
 void video_configure(const struct retro_game_geometry *geom)
 {
 	video.hw.version_major   = 2;
 	video.hw.version_minor   = 1;
 	video.hw.context_type    = RETRO_HW_CONTEXT_OPENGL;
+	/* Keep the CPU frame. The core's context_reset switches the session to
+	 * the GPU rasterizer, which tears sprites on this GL and leaves the
+	 * panel black when that rasterizer has nowhere to draw. */
 	if (platform_use_glsl_shaders()) {
 		video.hw.context_reset   = noop;
 		video.hw.context_destroy = noop;
@@ -371,8 +474,7 @@ void video_configure(const struct retro_game_geometry *geom)
 		video.hw.context_destroy = NULL;
 	}
 
-	if (!platform_window_ready())
-		create_window(g_cfg.window_width, g_cfg.window_height);
+	create_window(g_cfg.window_width, g_cfg.window_height);
 
 	video.tex_id = 0;
 
@@ -404,8 +506,14 @@ void video_configure(const struct retro_game_geometry *geom)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, tex_internal_format(), geom->max_width, geom->max_height, 0,
+	if (software_rgba_upload())
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, geom->max_width, geom->max_height, 0,
+			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	else
+		glTexImage2D(GL_TEXTURE_2D, 0, tex_internal_format(), geom->max_width, geom->max_height, 0,
 			video.pixtype, video.pixfmt, NULL);
+	video.gl_w = geom->max_width;
+	video.gl_h = geom->max_height;
 	if (platform_use_fbo())
 		init_framebuffer(geom->max_width, geom->max_height);
 
@@ -497,13 +605,23 @@ void video_refresh(const void *data, unsigned width, unsigned height, size_t pit
 		glUniform2f(shader.u_tex_size, width, height);
 	}
 
-	if (data) {
+	if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
 		const void *pixels = data;
+		GLenum internal = tex_internal_format();
+		GLenum format = video.pixtype;
+		GLenum type = video.pixfmt;
 		static unsigned char *tight;
 		static size_t tight_sz;
 		unsigned row_bytes = width * (unsigned)video.bpp;
 
-		if (!platform_unpack_row_length() && pitch != row_bytes) {
+		if (software_rgba_upload()) {
+			pixels = expand_to_rgba(data, width, height, pitch);
+			internal = GL_RGBA8;
+			format = GL_RGBA;
+			type = GL_UNSIGNED_BYTE;
+			if (platform_unpack_row_length())
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		} else if (!platform_unpack_row_length() && pitch != row_bytes) {
 			size_t need = (size_t)row_bytes * height;
 			unsigned y;
 
@@ -521,9 +639,19 @@ void video_refresh(const void *data, unsigned width, unsigned height, size_t pit
 				pixels = NULL;
 			}
 		}
-		if (pixels)
-			glTexImage2D(GL_TEXTURE_2D, 0, tex_internal_format(), (int)width, (int)height, 0,
-				video.pixtype, video.pixfmt, pixels);
+		if (pixels) {
+			/* glTexImage2D reallocates the texture. After the first frame of
+			 * this size, replace the pixels in place. */
+			if (video.gl_w == (GLint)width && video.gl_h == (GLint)height)
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)width, (int)height,
+					format, type, pixels);
+			else {
+				glTexImage2D(GL_TEXTURE_2D, 0, internal, (int)width, (int)height, 0,
+					format, type, pixels);
+				video.gl_w = (GLint)width;
+				video.gl_h = (GLint)height;
+			}
+		}
 	}
 
 	if (shader.program)

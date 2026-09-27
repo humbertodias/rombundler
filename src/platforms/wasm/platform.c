@@ -151,6 +151,11 @@ int platform_gl_entry_points_ok(void)
 	return 1;
 }
 
+int platform_gl_packed_uploads(void)
+{
+	return 1;
+}
+
 int platform_gles(void)
 {
 	return 1;

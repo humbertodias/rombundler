@@ -53,8 +53,8 @@ static void core_log(enum retro_log_level level, const char *fmt, ...)
 	if (level == 0)
 		return;
 
-	fprintf(stderr, "[%s] %s", levelstr[level], buffer);
-	fflush(stderr);
+	(void)levelstr;
+	platform_debug(buffer);
 }
 
 static retro_time_t get_time_usec()
@@ -66,6 +66,16 @@ static retro_time_t get_time_usec()
 
 static bool core_environment(unsigned cmd, void *data)
 {
+	static unsigned env_traced;
+
+	if (env_traced < 40) {
+		char line[48];
+
+		env_traced++;
+		snprintf(line, sizeof(line), "env %u", cmd);
+		platform_debug(line);
+	}
+
 	switch (cmd) {
 		case RETRO_ENVIRONMENT_SET_ROTATION: {
 			video_set_rotation(*(uintptr_t*)(data));
@@ -228,8 +238,11 @@ static void core_started(void)
 {
 	struct retro_system_av_info av = {0};
 
+	/* Open the window before another sdmc commit. Logging after the game
+	 * is loaded can block on the filesystem and leave the panel black. */
 	core.retro_get_system_av_info(&av);
 	video_configure(&av.geometry);
+	platform_debug("presented");
 	rb_audio_init(av.timing.sample_rate);
 	if (g_cfg.port0) core.retro_set_controller_port_device(0, g_cfg.port0);
 	if (g_cfg.port1) core.retro_set_controller_port_device(1, g_cfg.port1);
@@ -269,6 +282,7 @@ void core_load_game(const char *filename)
 			die("The core could not read the file.");
 	}
 
+	platform_debug("retro_load_game");
 	if (!core.retro_load_game(&info))
 		die("The core failed to load the content.");
 

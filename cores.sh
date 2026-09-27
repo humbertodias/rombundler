@@ -176,6 +176,21 @@ if [[ "${SKIP_DOCKER_BUILD:-}" != "1" ]]; then
 	docker build "${DOCKER_PLATFORM[@]}" -t "${IMAGE}" -f "docker/Dockerfile.${PORT}" docker/
 fi
 
+# The Zeebx staticlib is built from the zeebx tree. Source changes and the
+# aarch64/Horizon flags live there, not in a clone patched at this step.
+if [[ "${PORT}" == "switch" && "${CORE_KEY}" == "ZEEBX" ]]; then
+	ZEEBX_ROOT="${ZEEBX_ROOT:-$(cd "${ROOT}/../zeebx-emu" && pwd)}"
+	if [[ ! -x "${ZEEBX_ROOT}/frontends/switch/compilar.sh" ]]; then
+		echo "Zeebx Switch build not found: ${ZEEBX_ROOT}/frontends/switch/compilar.sh" >&2
+		echo "Set ZEEBX_ROOT to the zeebx-emu checkout." >&2
+		exit 1
+	fi
+	mkdir -p "${OUT_DIR}"
+	ZEEBX_SWITCH_IMAGE="${IMAGE}" bash "${ZEEBX_ROOT}/frontends/switch/compilar.sh" "${ROOT}/${OUT_DIR}"
+	echo "done. link with: bash build.sh switch ${OUT_DIR}/libzeebx_libretro.a"
+	exit 0
+fi
+
 MAKE_FLAGS="${MAKE_FLAGS:-}"
 RUN_CMD="$(core_assemble_cmd)"
 
@@ -227,15 +242,6 @@ if [[ "${PORT}" == "wasm" ]]; then
 	if [[ "${CORE_CMD:-}" == cargo\ * ]]; then
 		DOCKER_ENV+=(-e RUSTFLAGS="${RUSTFLAGS:-} -C relocation-model=pic")
 	fi
-elif [[ "${PORT}" == "switch" && "${CORE_CMD:-}" == cargo\ * ]]; then
-	# cc/build.rs must not compile C with the host gcc, or the .a mixes in EM: 62.
-	# Path inside the devkitA64 image, not the host.
-	_nx_bin="/opt/devkitpro/devkitA64/bin"
-	DOCKER_ENV+=(
-		-e CC_aarch64_unknown_linux_gnu="${_nx_bin}/aarch64-none-elf-gcc"
-		-e AR_aarch64_unknown_linux_gnu="${_nx_bin}/aarch64-none-elf-gcc-ar"
-		-e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER="${_nx_bin}/aarch64-none-elf-gcc"
-	)
 fi
 docker run --rm \
 	"${DOCKER_PLATFORM[@]}" \
@@ -244,7 +250,8 @@ docker run --rm \
 	-w "/src/${BUILD_DIR}" \
 	"${DOCKER_ENV[@]}" \
 	"${IMAGE}" \
-	bash -lc 'set -euo pipefail; eval "$CORE_BUILD_CMD"'
+	bash -lc 'set -euo pipefail
+eval "$CORE_BUILD_CMD"'
 
 ARTIFACTS=()
 while IFS= read -r -d '' art; do
