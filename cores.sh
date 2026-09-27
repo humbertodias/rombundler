@@ -82,7 +82,8 @@ core_assemble_cmd() {
 	local cmd="${CORE_CMD:-make -f Makefile.libretro}"
 
 	# cores.env names one command. The Switch entry builds the Horizon
-	# staticlib; Vita and wasm still want a normal cargo staticlib.
+	# staticlib. Vita and wasm still want a cargo staticlib; wasm then
+	# rebuilds std with panic=abort (see the cargo branch below).
 	if [[ "${PORT}" != "switch" && "${cmd}" == *frontends/switch/compilar.sh* ]]; then
 		cmd="cargo rustc --release -p zeebx-libretro --crate-type staticlib"
 	fi
@@ -113,6 +114,11 @@ core_assemble_cmd() {
 	elif [[ "${cmd}" == cargo\ * && "${PORT}" == "wasm" ]]; then
 		if [[ "${cmd}" != *" --target "* && "${cmd}" != *"--target="* ]]; then
 			cmd+=" --target wasm32-unknown-emscripten"
+		fi
+		# rustc's emscripten target references __cpp_exception unless panic
+		# is abort. The prebuilt std is unwind, so it has to be rebuilt too.
+		if [[ "${cmd}" != *"-Z build-std"* ]]; then
+			cmd+=" -Z build-std=std,panic_abort"
 		fi
 	elif [[ "${cmd}" == cargo\ * && "${PORT}" == "switch" ]]; then
 		# Host cargo emits x86_64 ELF (EM: 62); aarch64-none-elf-ld cannot link it.
@@ -227,13 +233,18 @@ fi
 # emmake injects CC=emcc CXX=em++ AR=emar. EMCC_CFLAGS=-fPIC covers compiles
 # that ignore $(fpic); side modules reject non-PIC objects.
 DOCKER_ENV=(-e HOME=/tmp -e CORE_BUILD_CMD="${RUN_CMD}")
-if [[ "${PORT}" == "wasm" ]]; then
-	DOCKER_ENV+=(-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC")
-	# Side modules reject non-PIC objects. Rust does not read EMCC_CFLAGS.
-	if [[ "${CORE_CMD:-}" == cargo\ * ]]; then
-		DOCKER_ENV+=(-e RUSTFLAGS="${RUSTFLAGS:-} -C relocation-model=pic")
+	if [[ "${PORT}" == "wasm" ]]; then
+		DOCKER_ENV+=(-e EMCC_CFLAGS="${EMCC_CFLAGS:-} -fPIC")
+		# Side modules reject non-PIC objects. Rust does not read EMCC_CFLAGS.
+		# Match RUN_CMD: cores.env may name compilar.sh, which wasm rewrites
+		# to cargo. panic=abort has to cover the rebuilt std as well.
+		if [[ "${RUN_CMD}" == cargo\ * ]]; then
+			DOCKER_ENV+=(
+				-e RUSTC_BOOTSTRAP=1
+				-e "CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS=-C link-self-contained=no -C panic=abort -C relocation-model=pic ${RUSTFLAGS:-}"
+			)
+		fi
 	fi
-fi
 docker run --rm \
 	"${DOCKER_PLATFORM[@]}" \
 	-u "$(id -u):$(id -g)" \
