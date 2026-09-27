@@ -81,6 +81,12 @@ core_resolve() {
 core_assemble_cmd() {
 	local cmd="${CORE_CMD:-make -f Makefile.libretro}"
 
+	# cores.env names one command. The Switch entry builds the Horizon
+	# staticlib; Vita and wasm still want a normal cargo staticlib.
+	if [[ "${PORT}" != "switch" && "${cmd}" == *frontends/switch/compilar.sh* ]]; then
+		cmd="cargo rustc --release -p zeebx-libretro --crate-type staticlib"
+	fi
+
 	if [[ "${cmd}" == make\ * ]]; then
 		if [[ "${cmd}" != *" platform="* ]]; then
 			cmd+=" platform=${MAKE_PLATFORM}"
@@ -174,21 +180,6 @@ fi
 
 if [[ "${SKIP_DOCKER_BUILD:-}" != "1" ]]; then
 	docker build "${DOCKER_PLATFORM[@]}" -t "${IMAGE}" -f "docker/Dockerfile.${PORT}" docker/
-fi
-
-# The Zeebx staticlib is built from the zeebx tree. Source changes and the
-# aarch64/Horizon flags live there, not in a clone patched at this step.
-if [[ "${PORT}" == "switch" && "${CORE_KEY}" == "ZEEBX" ]]; then
-	ZEEBX_ROOT="${ZEEBX_ROOT:-$(cd "${ROOT}/../zeebx-emu" && pwd)}"
-	if [[ ! -x "${ZEEBX_ROOT}/frontends/switch/compilar.sh" ]]; then
-		echo "Zeebx Switch build not found: ${ZEEBX_ROOT}/frontends/switch/compilar.sh" >&2
-		echo "Set ZEEBX_ROOT to the zeebx-emu checkout." >&2
-		exit 1
-	fi
-	mkdir -p "${OUT_DIR}"
-	ZEEBX_SWITCH_IMAGE="${IMAGE}" bash "${ZEEBX_ROOT}/frontends/switch/compilar.sh" "${ROOT}/${OUT_DIR}"
-	echo "done. link with: bash build.sh switch ${OUT_DIR}/libzeebx_libretro.a"
-	exit 0
 fi
 
 MAKE_FLAGS="${MAKE_FLAGS:-}"
