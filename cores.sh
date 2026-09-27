@@ -108,6 +108,11 @@ core_assemble_cmd() {
 		if [[ "${cmd}" != *" --target "* && "${cmd}" != *"--target="* ]]; then
 			cmd+=" --target wasm32-unknown-emscripten"
 		fi
+	elif [[ "${cmd}" == cargo\ * && "${PORT}" == "switch" ]]; then
+		# Host cargo emits x86_64 ELF (EM: 62); aarch64-none-elf-ld cannot link it.
+		if [[ "${cmd}" != *" --target "* && "${cmd}" != *"--target="* ]]; then
+			cmd+=" --target aarch64-unknown-linux-gnu"
+		fi
 	fi
 	printf '%s\n' "${cmd}"
 }
@@ -222,6 +227,15 @@ if [[ "${PORT}" == "wasm" ]]; then
 	if [[ "${CORE_CMD:-}" == cargo\ * ]]; then
 		DOCKER_ENV+=(-e RUSTFLAGS="${RUSTFLAGS:-} -C relocation-model=pic")
 	fi
+elif [[ "${PORT}" == "switch" && "${CORE_CMD:-}" == cargo\ * ]]; then
+	# cc/build.rs must not compile C with the host gcc, or the .a mixes in EM: 62.
+	# Path inside the devkitA64 image, not the host.
+	_nx_bin="/opt/devkitpro/devkitA64/bin"
+	DOCKER_ENV+=(
+		-e CC_aarch64_unknown_linux_gnu="${_nx_bin}/aarch64-none-elf-gcc"
+		-e AR_aarch64_unknown_linux_gnu="${_nx_bin}/aarch64-none-elf-gcc-ar"
+		-e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER="${_nx_bin}/aarch64-none-elf-gcc"
+	)
 fi
 docker run --rm \
 	"${DOCKER_PLATFORM[@]}" \
