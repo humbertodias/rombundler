@@ -35,6 +35,10 @@ Override config on the SD card (this file wins over the copy baked into the NRO)
 
 `sdmc:/switch/rombundler/config.ini`
 
+Copy `options.ini` to the same folder. That file also wins over the copy inside the NRO:
+
+`sdmc:/switch/rombundler/options.ini`
+
 ```ini
 title = My Game
 core = dummy

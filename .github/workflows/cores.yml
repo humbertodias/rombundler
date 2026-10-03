@@ -125,6 +125,7 @@ on:
           - wolf3d
           - x1
           - x68000
+          - zeebx
   push:
     branches: [master, main]
     paths:

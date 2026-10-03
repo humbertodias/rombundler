@@ -9,7 +9,7 @@ on:
         description: "Libretro core (dummy = color bars; all = every name in cores.env)"
         type: choice
         required: true
-        default: dummy
+        default: zeebx
         options:
           - dummy
           - all
@@ -123,6 +123,7 @@ on:
           - wolf3d
           - x1
           - x68000
+          - zeebx
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
@@ -194,6 +195,7 @@ jobs:
         core:
           - genesis_plus_gx
           - snes9x2010
+          - zeebx
     steps:
       - uses: actions/checkout@v4
 

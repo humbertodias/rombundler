@@ -9,14 +9,19 @@ FROM vitasdk/vitasdk:latest
 
 ENV PLATFORM=vita \
     VITASDK=/usr/local/vitasdk \
-    PATH="/usr/local/vitasdk/bin:${PATH}"
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH="/usr/local/cargo/bin:/usr/local/vitasdk/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
         cmake \
+        curl \
         gcc \
         g++ \
         git \
         ninja-build \
+        pkg-config \
         zip \
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*' \
@@ -34,6 +39,17 @@ RUN set -eux; \
     make -C /tmp/vitaGL -j"$(nproc)" HAVE_SCE_SHACCCG=1 HAVE_VITA3K_SUPPORT=1 NO_SPLASHSCREEN=1; \
     make -C /tmp/vitaGL install; \
     rm -rf /tmp/vitaGL
+
+# cores.sh runs as the host uid and enters with bash -lc, which rebuilds PATH.
+# profile.d puts cargo back on that PATH.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+        sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path \
+    && rustup component add rust-src \
+    && test -d "$(rustc --print sysroot)/lib/rustlib/src/rust/library/std" \
+    && chmod -R a+rwX "${RUSTUP_HOME}" "${CARGO_HOME}" \
+    && printf 'export RUSTUP_HOME=%s\nexport CARGO_HOME=%s\nexport PATH="%s/bin:${PATH}"\n' \
+        "${RUSTUP_HOME}" "${CARGO_HOME}" "${CARGO_HOME}" > /etc/profile.d/rust.sh \
+    && cargo --version
 
 WORKDIR /src
 CMD ["bash"]

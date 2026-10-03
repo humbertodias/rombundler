@@ -84,7 +84,7 @@ bash cores.sh switch genesis_plus_gx
 bash build.sh switch cores/switch/genesis_plus_gx_libretro_libnx.a
 ```
 
-Names live in [`cores.env`](cores.env) (`NAME=git-url`). Add a line there to register a new core; lookup is case-insensitive (docs use lowercase). Archives land in `cores/<port>/` (gitignored). Optional make knobs: `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis`.
+Names live in [`cores.env`](cores.env) (`NAME=git-url,branch,command`). Add a line there to register a new core; lookup is case-insensitive (docs use lowercase). Archives land in `cores/<port>/` (gitignored). Optional make knobs: `MAKE_FLAGS='HAVE_CHD=0' bash build.sh switch --fetch-core genesis`.
 
 CI: [`.github/workflows/cores.yml`](.github/workflows/cores.yml) — on **workflow_dispatch**, pick a core from the dropdown (`dummy` skips, `all` builds every name in `cores.env`). Push still smokes `genesis_plus_gx` × switch/vita/wasm. The wasm job also links the chosen core into a droppable side-module `.wasm`.
 

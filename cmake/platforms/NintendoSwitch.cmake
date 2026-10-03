@@ -7,6 +7,7 @@ set (ROMBUNDLER_PLATFORM_SOURCES
   "${CMAKE_SOURCE_DIR}/src/platforms/switch/platform.c"
   "${CMAKE_SOURCE_DIR}/src/platforms/switch/audio.c"
   "${CMAKE_SOURCE_DIR}/src/platforms/switch/input.c"
+  "${CMAKE_SOURCE_DIR}/src/platforms/switch/linux_compat.c"
 )
 set (ROMBUNDLER_PLATFORM_LIBS glad)
 if (ROMBUNDLER_CORE_LIBRARY)
@@ -23,14 +24,15 @@ set (ROMBUNDLER_PLATFORM_INCLUDES
 rombundler_add_frontend ()
 
 set_target_properties (rombundler PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries (rombundler PRIVATE ${ROMBUNDLER_PLATFORM_LIBS} EGL glapi drm_nouveau nx stdc++ m)
+target_link_options (rombundler PRIVATE "-Wl,--wrap=pthread_create,--wrap=pthread_join,--wrap=pthread_detach,--wrap=write,--wrap=clock_gettime,--wrap=malloc,--wrap=calloc,--wrap=posix_memalign,--wrap=aligned_alloc")
+target_link_libraries (rombundler PRIVATE ${ROMBUNDLER_PLATFORM_LIBS} EGL glapi drm_nouveau sysbase nx stdc++ m)
 if (ROMBUNDLER_PLATFORM_DEFINES)
   target_compile_definitions (rombundler PRIVATE ${ROMBUNDLER_PLATFORM_DEFINES})
 endif ()
 
 set (ROMBUNDLER_INSTALL_PLATFORM "Nintendo Switch")
 set (ROMBUNDLER_INSTALL_STEPS [=[Copy `rombundler.nro` to `sdmc:/switch/` (Atmosphere / hbmenu) or send it with `nxlink`. Plus+Minus returns to the homebrew menu.]=])
-set (ROMBUNDLER_INSTALL_DATA [=[See `switch.md` in this folder. Copy `config.ini` to `sdmc:/switch/rombundler/config.ini`. Point `rom=` at a file on the SD card. `core=` does not load a RetroArch `*_libnx.nro`. SRAM is `sdmc:/switch/rombundler/save.srm`. Errors: `sdmc:/switch/rombundler/error.log`.]=])
+set (ROMBUNDLER_INSTALL_DATA [=[See `switch.md` in this folder. Copy `config.ini` to `sdmc:/switch/rombundler/config.ini` and `options.ini` to `sdmc:/switch/rombundler/options.ini`. Point `rom=` at a file on the SD card. `core=` does not load a RetroArch `*_libnx.nro`. SRAM is `sdmc:/switch/rombundler/save.srm`. Errors: `sdmc:/switch/rombundler/error.log`.]=])
 set (ROMBUNDLER_INSTALL_LAYOUT [=[Static homebrew NRO: Mesa EGL/OpenGL and libnx `audout`. No GLFW/OpenAL. No runtime `dlopen`.]=])
 
 find_program (NACPTOOL nacptool REQUIRED)
@@ -67,5 +69,6 @@ rombundler_package_dist (
   FILES
     "${NX_NRO}"
     "${NX_ROMFS}/config.ini"
+    "${NX_ROMFS}/options.ini"
     "${CMAKE_SOURCE_DIR}/doc/switch.md"
 )

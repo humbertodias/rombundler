@@ -26,6 +26,8 @@ int platform_has_audio(void);
 int platform_gl_entry_points_ok(void);
 
 int platform_gles(void);
+/* Non-zero when GL accepts packed 565/1555/BGRA uploads. Core profiles do not. */
+int platform_gl_packed_uploads(void);
 int platform_use_fbo(void);
 int platform_unpack_row_length(void);
 void platform_draw_immediate_quad(const float quad[16]);
